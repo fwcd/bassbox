@@ -1,0 +1,9 @@
+[package]
+name = "bassbox"
+version = "0.1.0"
+authors = ["fwcd"]
+edition = "2018"
+
+[dependencies]
+dsp-chain = "0.13.1"
+portaudio = "0.7.0"
