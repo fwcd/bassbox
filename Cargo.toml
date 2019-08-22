@@ -5,5 +5,4 @@ authors = ["fwcd"]
 edition = "2018"
 
 [dependencies]
-dsp-chain = "0.13.1"
-portaudio = "0.7.0"
+rodio = "0.9.0"
