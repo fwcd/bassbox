@@ -6,7 +6,9 @@ use jsonrpc_stdio_server::ServerBuilder;
 
 fn main() {
 	let mut io = IoHandler::default();
-	io.extend_with(AudioPlayerService::from_file("local/oldtownroad.mp3").unwrap().to_delegate());
+	io.extend_with(AudioPlayerService::using_default_output()
+		.expect("Could not fetch default output device")
+		.to_delegate());
 	
 	ServerBuilder::new(io).build();
 }
