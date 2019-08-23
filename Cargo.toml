@@ -8,3 +8,7 @@ edition = "2018"
 rodio = "0.9.0"
 jsonrpc-core = "13.0.0"
 jsonrpc-derive = "13.0.0"
+jsonrpc-stdio-server = "13.0.0"
+# Required by jsonrpc-derive, see https://github.com/paritytech/jsonrpc/issues/481
+serde = "1.0.99"
+jsonrpc-core-client = "13.0.0"

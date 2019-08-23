@@ -1,15 +1,12 @@
-extern crate rodio;
+mod services;
 
-use std::fs::File;
-use std::io::BufReader;
-use rodio::Source;
-use rodio::Sink;
+use services::player::{AudioPlayerServiceRpc, AudioPlayerService};
+use jsonrpc_core::IoHandler;
+use jsonrpc_stdio_server::ServerBuilder;
 
 fn main() {
-	let device = rodio::default_output_device().unwrap();
-	let file = File::open("local/oldtownroad.mp3").unwrap();
-	let source = rodio::Decoder::new(BufReader::new(file)).unwrap();
-	let sink = Sink::new(&device);
-	sink.append(source);
-	sink.sleep_until_end();
+	let mut io = IoHandler::default();
+	io.extend_with(AudioPlayerService::from_file("local/oldtownroad.mp3").unwrap().to_delegate());
+	
+	ServerBuilder::new(io).build();
 }
