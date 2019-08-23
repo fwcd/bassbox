@@ -9,10 +9,10 @@ use rodio::Sink;
 #[rpc]
 pub trait AudioPlayerServiceRpc {
 	#[rpc(name = "audioPlayer.play")]
-	fn play(&self);
+	fn play(&self) -> RpcResult<()>;
 	
 	#[rpc(name = "audioPlayer.pause")]
-	fn pause(&self);
+	fn pause(&self) -> RpcResult<()>;
 }
 
 pub struct AudioPlayerService {
@@ -34,12 +34,14 @@ impl AudioPlayerService {
 
 impl AudioPlayerServiceRpc for AudioPlayerService {
 	/// Continues playback after a pause.
-	fn play(&self) {
+	fn play(&self) -> RpcResult<()> {
 		self.sink.play();
+		Ok(())
 	}
 	
 	/// Pauses playback.
-	fn pause(&self) {
+	fn pause(&self) -> RpcResult<()> {
 		self.sink.pause();
+		Ok(())
 	}
 }
