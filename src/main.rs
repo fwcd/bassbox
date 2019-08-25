@@ -1,4 +1,6 @@
 mod services;
+mod sink;
+mod dspnodes;
 
 use services::player::{AudioPlayerServiceRpc, AudioPlayerService};
 use jsonrpc_core::IoHandler;
