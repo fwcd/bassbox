@@ -3,7 +3,7 @@ use jsonrpc_derive::rpc;
 use super::rpcutils::server_error;
 use std::fs::File;
 use std::io::BufReader;
-use rodio::Sink;
+use crate::context::AudioContext;
 
 /// The audio playing service methods exposed via JSON-RPC.
 #[rpc]
@@ -22,15 +22,12 @@ pub trait AudioPlayerServiceRpc {
 }
 
 pub struct AudioPlayerService {
-	sink: Sink
+	context: AudioContext
 }
 
 impl AudioPlayerService {
-	/// Creates a new player service using the default
-	/// audio output device.
-	pub fn using_default_output() -> Option<AudioPlayerService> {
-		let device = rodio::default_output_device()?;
-		Some(AudioPlayerService { sink: Sink::new(&device) })
+	pub fn with_context(context: AudioContext) -> AudioPlayerService {
+		AudioPlayerService { context: context }
 	}
 }
 
