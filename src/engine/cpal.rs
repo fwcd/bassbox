@@ -1,9 +1,10 @@
-use std::thread;
-use sink::Sink;
 use super::AudioEngine;
-use crate::audioformat::{Frame, empty_frame};
+use crate::audioformat::{Frame, empty_frame, CHANNELS};
 use crate::context::AudioContext;
+use std::sync::atomic::Ordering;
+use dsp::Node;
 use cpal::{StreamData, UnknownTypeOutputBuffer};
+use cpal::traits::{DeviceTrait, EventLoopTrait, HostTrait};
 
 /// An engine that uses CPAL to provide
 /// cross-platform audio output.
@@ -15,20 +16,20 @@ impl AudioEngine for CpalEngine {
 		let host = cpal::default_host();
 		let event_loop = host.event_loop();
 		let device = host.default_output_device().expect("No output device available.");
-		let format = host.default_output_format().expect("No default format.");
+		let format = device.default_output_format().expect("No default format.");
 		let sample_rate = format.sample_rate.0 as f64;
 		let stream_id = event_loop.build_output_stream(&device, &format).expect("Could not build output stream");
 		
 		event_loop.play_stream(stream_id.clone()).expect("Could not play stream.");
 		event_loop.run(move |id, result| {
 			let data = result.expect("Error while streaming.");
-			let mut req_buffer: Vec<Frame> = vec![empty_frame(); buffer_size(&data)];
+			let mut req_buffer: Vec<Frame> = vec![empty_frame(); buffer_size(&data).expect("Not output data.")];
 			
 			// Read audio into temporary buffer
-			graph.audio_requested(&mut req_buffer, sample_rate);
+			context.graph.lock().unwrap().audio_requested(&mut req_buffer, sample_rate);
 			
-			if context.sinks.default.enabled {
-				write_audio(&req_buffer, &mut data);
+			if context.sinks.default.enabled.load(Ordering::Relaxed) {
+				write_audio(&req_buffer, data);
 			}
 			
 			for sink in context.sinks.additional.lock().unwrap().values() {
@@ -44,7 +45,7 @@ fn buffer_size(data: &StreamData) -> Option<usize> {
 		StreamData::Output { buffer: UnknownTypeOutputBuffer::U16(ref buffer) } => Some(buffer.len()),
 		StreamData::Output { buffer: UnknownTypeOutputBuffer::I16(ref buffer) } => Some(buffer.len()),
 		StreamData::Output { buffer: UnknownTypeOutputBuffer::F32(ref buffer) } => Some(buffer.len()),
-		() => None
+		_ => None
 	}
 }
 
@@ -73,6 +74,6 @@ fn write_audio(audio: &[Frame], data: StreamData) {
 				}
 			}
 		},
-		_ => println!("Format unsupported: {:?}", format)
+		_ => println!("CPAL stream format unsupported.")
 	}
 }

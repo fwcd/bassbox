@@ -7,7 +7,13 @@ use std::sync::atomic::AtomicBool;
 /// in the engine directly. Can be enabled
 /// or disabled.
 pub struct DefaultSink {
-	enabled: AtomicBool
+	pub enabled: AtomicBool
+}
+
+impl DefaultSink {
+	pub fn new() -> DefaultSink {
+		DefaultSink { enabled: AtomicBool::new(true) }
+	}
 }
 
 /// Marker implementation of Sink. Does
