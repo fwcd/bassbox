@@ -14,7 +14,9 @@ use jsonrpc_stdio_server::ServerBuilder;
 
 fn main() {
 	let context = AudioContext::new();
-	run_engine_in_background(context);
+	thread::spawn(move || {
+		run_engine(CpalEngine, context);
+	});
 
 	// Setup RPC
 	let mut io = IoHandler::default();
@@ -25,8 +27,6 @@ fn main() {
 	ServerBuilder::new(io).build();
 }
 
-fn run_engine_in_background(context: AudioContext) {
-	thread::spawn(move || {
-		CpalEngine.run(context);
-	});
+fn run_engine(engine: impl AudioEngine, context: AudioContext) {
+	engine.run(context);
 }
