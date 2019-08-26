@@ -8,9 +8,9 @@ use cpal::traits::{DeviceTrait, EventLoopTrait, HostTrait};
 
 /// An engine that uses CPAL to provide
 /// cross-platform audio output.
-pub struct CpalEngine;
+pub struct SpeakerEngine;
 
-impl AudioEngine for CpalEngine {
+impl AudioEngine for SpeakerEngine {
 	fn run(self, context: AudioContext) {
 		// Setup CPAL
 		let host = cpal::default_host();
@@ -27,14 +27,6 @@ impl AudioEngine for CpalEngine {
 			
 			// Read audio into temporary buffer
 			context.graph.lock().unwrap().audio_requested(&mut req_buffer, sample_rate);
-			
-			if context.sinks.default.enabled.load(Ordering::Relaxed) {
-				write_audio(&req_buffer, data);
-			}
-			
-			for sink in context.sinks.additional.lock().unwrap().values() {
-				sink.output_audio(&req_buffer);
-			}
 		});
 	}
 }

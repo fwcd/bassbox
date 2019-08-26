@@ -33,21 +33,27 @@ impl AudioPlayerService {
 
 impl AudioPlayerServiceRpc for AudioPlayerService {
 	fn enqueue_file(&self, path: String) -> RpcResult<()> {
-		let file = File::open(&path)
-			.map_err(|e| server_error(format!("Could not find file at '{}': {}", &path, e)))?;
-		let source = rodio::Decoder::new(BufReader::new(file))
-			.map_err(|e| server_error(format!("Could not decode file at '{}': {}", &path, e)))?;
-		self.sink.append(source);
+		// let file = File::open(&path)
+		// 	.map_err(|e| server_error(format!("Could not find file at '{}': {}", &path, e)))?;
+		// let source = rodio::Decoder::new(BufReader::new(file))
+		// 	.map_err(|e| server_error(format!("Could not decode file at '{}': {}", &path, e)))?;
+		// self.sink.append(source);
+		
+		// TODO!
 		Ok(())
 	}
 	
 	fn play(&self) -> RpcResult<()> {
-		self.sink.play();
+		// self.sink.play();
+		
+		// TODO!
 		Ok(())
 	}
 	
 	fn pause(&self) -> RpcResult<()> {
-		self.sink.pause();
+		// self.sink.pause();
+		
+		// TODO!
 		Ok(())
 	}
 }

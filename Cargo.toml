@@ -5,6 +5,8 @@ authors = ["fwcd"]
 edition = "2018"
 
 [dependencies]
+# General
+getopts = "0.2"
 # Audio
 dsp-chain = "0.13.1"
 cpal = "0.10.0"

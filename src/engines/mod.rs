@@ -1,7 +1,7 @@
 //! Contains blocking facilities that run
 //! the audio graph and the sinks.
 
-pub mod cpal;
+pub mod speaker;
 
 use crate::context::AudioContext;
 
