@@ -3,6 +3,7 @@
 
 use dsp::Node;
 use dsp::sample::rate::Converter;
+use dsp::sample::Frame;
 use crate::audioformat::{StandardFrame, empty_standard_frame};
 
 /// An audio processing node which can either be a source
@@ -16,7 +17,8 @@ use crate::audioformat::{StandardFrame, empty_standard_frame};
 pub enum DspNode {
 	Empty,
 	Silence,
-	Source { src: Converter<Box<dyn Iterator<Item=StandardFrame> + Send>>, state: PauseState }
+	Source { src: Converter<Box<dyn Iterator<Item=StandardFrame> + Send>>, state: PauseState },
+	Volume(f32)
 }
 
 /// A state of playback.
@@ -37,7 +39,8 @@ impl Node<StandardFrame> for DspNode {
 					}
 				},
 				PauseState::Paused => silence(buffer)
-			}
+			},
+			Self::Volume(factor) => dsp::slice::map_in_place(buffer, |frame| frame.scale_amp(factor))
 		}
 	}
 }
