@@ -19,3 +19,6 @@ and continue playback using
 ```json
 {"jsonrpc":"2.0","id":0,"method":"audioPlayer.play"}
 ```
+
+## Architecture
+On a high level, the application launches an `engine` on a background thread and starts RPC `services`, which control what the engine plays by mutating an audio graph.
