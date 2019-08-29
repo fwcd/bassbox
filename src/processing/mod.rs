@@ -5,13 +5,21 @@ use dsp::Node;
 use dsp::sample::rate::Converter;
 use crate::audioformat::{StandardFrame, empty_standard_frame};
 
-/// An audio processing node.
+/// An audio processing node which can either be a source
+/// or an intermediate node that performs some transformation
+/// on the audio buffer's contents.
+/// 
+/// _Generally_ all intermediate operations that perform modifications
+/// on the audio source (like pausing playback) should either
+/// be implemented as a parameter of `DspNode::Source` or in an
+/// `AudioSource` implementation wrapping another `AudioSource`.
 pub enum DspNode {
 	Empty,
 	Silence,
-	Source { src: Converter<Box<dyn Iterator<Item=StandardFrame> + Send>>, state: PauseState },
+	Source { src: Converter<Box<dyn Iterator<Item=StandardFrame> + Send>>, state: PauseState }
 }
 
+/// A state of playback.
 pub enum PauseState {
 	Paused,
 	Playing
