@@ -47,8 +47,6 @@ impl AudioEngine for SpeakerEngine {
 
 			event_loop.run(move |_id, result| {
 				let mut data = result.expect("Error while streaming.");
-				let sample_count = buffer_sample_count(&data).unwrap_or(0);
-				let frame_count = sample_count / STANDARD_CHANNELS;
 				
 				// Possibly receive a control operation message
 				if let Ok(msg) = control_receiver.try_recv() {
@@ -63,12 +61,21 @@ impl AudioEngine for SpeakerEngine {
 				}
 			
 				if !paused {
-					// Read audio from graph into temporary buffer
-					let mut audio: Vec<StandardFrame> = vec![empty_standard_frame(); frame_count];
-					shared_graph.lock().unwrap().audio_requested(&mut audio, sample_hz);
-				
-					// Play it
-					with_buffer_of!(data, |buffer| write_audio(&audio, buffer));
+					// Play the audio
+					if let StreamData::Output { buffer: UnknownTypeOutputBuffer::F32(ref mut buffer) } = data {
+						// Our speaker format matches the internal format, thus we do
+						// not need to allocate an extra vector
+						let buf_slice: &mut [StandardFrame] = buffer.to_frame_slice_mut().unwrap();
+						shared_graph.lock().unwrap().audio_requested(buf_slice, sample_hz);
+					} else {
+						// Read audio from graph into temporary buffer
+						let sample_count = buffer_sample_count(&data).unwrap_or(0);
+						let frame_count = sample_count / STANDARD_CHANNELS;
+						let mut audio: Vec<StandardFrame> = vec![empty_standard_frame(); frame_count];
+						shared_graph.lock().unwrap().audio_requested(&mut audio, sample_hz);
+					
+						with_buffer_of!(data, |buffer| write_audio(&audio, buffer));
+					}
 				}
 			});
 		});
