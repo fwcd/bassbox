@@ -26,12 +26,17 @@ pub struct BackgroundEngine {
 /// sent to an engine through EngineControls.
 #[derive(Debug)]
 pub enum ControlMsg {
-	// TODO: Figure out some use case
+	Pause,
+	Play
 }
 
 /// A wrapper around an MPSC channel that
 /// allows you to send a control (message)
 /// to the engine.
+/// 
+/// Note that these _engine-level_ operations
+/// are completely unrelated to _graph-level_
+/// operations (such as `DspNode::Source.state`).
 #[derive(Clone)]
 pub struct EngineControls {
 	tx: mpsc::SyncSender<ControlMsg>

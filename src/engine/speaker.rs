@@ -1,4 +1,4 @@
-use super::{AudioEngine, BackgroundEngine, EngineControls};
+use super::{AudioEngine, BackgroundEngine, ControlMsg, EngineControls};
 use crate::audioformat::{StandardFrame, empty_standard_frame, STANDARD_CHANNELS, StandardSample};
 use crate::graph::SharedAudioGraph;
 use std::sync::mpsc;
@@ -7,6 +7,17 @@ use dsp::Node;
 use dsp::sample::{Sample, Frame, FromSample, conv::ToFrameSliceMut};
 use cpal::{StreamData, UnknownTypeOutputBuffer, OutputBuffer};
 use cpal::traits::{DeviceTrait, EventLoopTrait, HostTrait};
+
+macro_rules! with_buffer_of {
+	($data: expr, $body: expr) => {
+		match $data {
+			StreamData::Output { buffer: UnknownTypeOutputBuffer::U16(ref mut buffer) } => $body(buffer),
+			StreamData::Output { buffer: UnknownTypeOutputBuffer::I16(ref mut buffer) } => $body(buffer),
+			StreamData::Output { buffer: UnknownTypeOutputBuffer::F32(ref mut buffer) } => $body(buffer),
+			_ => println!("Audio format was not recognized by CPAL!")
+		}
+	};
+}
 
 /// An engine that uses CPAL to provide
 /// cross-platform audio output.
@@ -32,6 +43,8 @@ impl AudioEngine for SpeakerEngine {
 		event_loop.play_stream(stream_id.clone()).expect("Could not play stream.");
 
 		thread::spawn(move || {
+			let mut paused = false;
+
 			event_loop.run(move |_id, result| {
 				let mut data = result.expect("Error while streaming.");
 				let sample_count = buffer_sample_count(&data).unwrap_or(0);
@@ -40,19 +53,22 @@ impl AudioEngine for SpeakerEngine {
 				// Possibly receive a control operation message
 				if let Ok(msg) = control_receiver.try_recv() {
 					match msg {
+						ControlMsg::Play => paused = false,
+						ControlMsg::Pause => {
+							with_buffer_of!(data, write_silence);
+							paused = true
+						},
 						_ => println!("Control message not recognized by the speaker/CPAL engine: {:?}", msg)
 					}
 				}
+			
+				if !paused {
+					// Read audio from graph into temporary buffer
+					let mut audio: Vec<StandardFrame> = vec![empty_standard_frame(); frame_count];
+					shared_graph.lock().unwrap().audio_requested(&mut audio, sample_hz);
 				
-				// Read audio from graph into temporary buffer
-				let mut audio: Vec<StandardFrame> = vec![empty_standard_frame(); frame_count];
-				shared_graph.lock().unwrap().audio_requested(&mut audio, sample_hz);
-				
-				match data {
-					StreamData::Output { buffer: UnknownTypeOutputBuffer::U16(ref mut buffer) } => write_audio(&audio, buffer),
-					StreamData::Output { buffer: UnknownTypeOutputBuffer::I16(ref mut buffer) } => write_audio(&audio, buffer),
-					StreamData::Output { buffer: UnknownTypeOutputBuffer::F32(ref mut buffer) } => write_audio(&audio, buffer),
-					_ => println!("Audio format was not recognized by CPAL!")
+					// Play it
+					with_buffer_of!(data, |buffer| write_audio(&audio, buffer));
 				}
 			});
 		});
@@ -76,5 +92,12 @@ fn write_audio<S>(audio: &[StandardFrame], buffer: &mut OutputBuffer<S>) where S
 	let buf_slice: &mut [[S; STANDARD_CHANNELS]] = buffer.to_frame_slice_mut().unwrap();
 	for (i, frame) in buf_slice.iter_mut().enumerate() {
 		*frame = audio[i].map(Sample::to_sample);
+	}
+}
+
+/// "Zeroes out" the buffer.
+fn write_silence<S>(buffer: &mut OutputBuffer<S>) where S: cpal::Sample + FromSample<u16> {
+	for i in 0..buffer.len() {
+		buffer[i] = 0.to_sample();
 	}
 }

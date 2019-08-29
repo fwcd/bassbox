@@ -8,7 +8,7 @@ use dsp::sample::rate::Converter;
 use crate::source::{AudioSource, mp3::Mp3Source};
 use crate::graph::SharedAudioGraph;
 use crate::processing::{DspNode, PauseState};
-use crate::engine::BackgroundEngine;
+use crate::engine::{BackgroundEngine, ControlMsg};
 
 /// The audio playing service methods exposed via JSON-RPC.
 #[rpc]
@@ -83,18 +83,12 @@ impl AudioPlayerServiceRpc for AudioPlayerService {
 	}
 	
 	fn play(&self) -> RpcResult<()> {
-		let mut graph = self.shared_graph.lock().unwrap();
-		if let DspNode::Source { ref mut state, .. } = graph.node_mut(self.src_node).expect("Audio graph has no pauser") {
-			*state = PauseState::Playing;
-		}
+		self.engine.controls.send(ControlMsg::Play);
 		Ok(())
 	}
 	
 	fn pause(&self) -> RpcResult<()> {
-		let mut graph = self.shared_graph.lock().unwrap();
-		if let DspNode::Source { ref mut state, .. } = graph.node_mut(self.src_node).expect("Audio graph has no pauser") {
-			*state = PauseState::Paused;
-		}
+		self.engine.controls.send(ControlMsg::Pause);
 		Ok(())
 	}
 }
