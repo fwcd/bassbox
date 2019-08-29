@@ -6,15 +6,8 @@ use crate::audioformat::StandardFrame;
 /// The audio graph which is shared between
 /// an engine and possibly control threads
 /// (such as RPC-mechanisms).
-#[derive(Clone)]
-pub struct SharedAudioGraph {
-	pub graph: Arc<Mutex<Graph<StandardFrame, DspNode>>>
-}
+pub type SharedAudioGraph = Arc<Mutex<Graph<StandardFrame, DspNode>>>;
 
-impl SharedAudioGraph {
-	pub fn new() -> SharedAudioGraph {
-		SharedAudioGraph {
-			graph: Arc::new(Mutex::new(Graph::new()))
-		}
-	}
+pub fn new_shared_graph() -> SharedAudioGraph {
+	Arc::new(Mutex::new(Graph::new()))
 }

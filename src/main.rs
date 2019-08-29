@@ -1,15 +1,15 @@
-mod engines;
+mod engine;
 mod services;
 mod processing;
 mod source;
 mod graph;
 mod audioformat;
 
-use graph::SharedAudioGraph;
-use engines::{AudioEngine, speaker::SpeakerEngine};
+use graph::new_shared_graph;
+use engine::{AudioEngine, speaker::SpeakerEngine};
 use getopts::Options;
 use services::player::{AudioPlayerServiceRpc, AudioPlayerService};
-use std::{thread, env};
+use std::env;
 use jsonrpc_core::IoHandler;
 use jsonrpc_stdio_server::ServerBuilder;
 
@@ -37,23 +37,15 @@ fn main() {
 	let engine_str = parsed_args.opt_str("e");
 	
 	// Spawn engine
-	let shared_graph = SharedAudioGraph::new();
-	let shared_graph_clone = shared_graph.clone();
+	let shared_graph = new_shared_graph();
+	let background_engine = match engine_str.unwrap().as_str() {
+		"speaker" => SpeakerEngine.run_async(shared_graph.clone()),
+		_ => panic!("Unrecognized engine, try one of these: {:?}.", supported_engines)
+	};
 
-	thread::spawn(move || {
-		match engine_str.unwrap().as_str() {
-			"speaker" => run_engine(SpeakerEngine, shared_graph_clone),
-			_ => println!("Unrecognized engine, try one of these: {:?}.", supported_engines)
-		};
-	});
-
-	// Setup RPC
+	// Setup RPC services
 	let mut io = IoHandler::default();
-	io.extend_with(AudioPlayerService::with_shared_graph(shared_graph).to_delegate());
+	io.extend_with(AudioPlayerService::constructing_graph(shared_graph, background_engine).to_delegate());
 	
 	ServerBuilder::new(io).build();
-}
-
-fn run_engine(engine: impl AudioEngine, context: SharedAudioGraph) {
-	engine.run(context);
 }
