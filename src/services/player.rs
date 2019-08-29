@@ -24,6 +24,10 @@ pub trait AudioPlayerServiceRpc {
 	/// Pauses playback.
 	#[rpc(name = "audioPlayer.pause")]
 	fn pause(&self) -> RpcResult<()>;
+	
+	/// Controls volume
+	#[rpc(name = "audioPlayer.setVolume")]
+	fn set_volume(&self, volume: f32) -> RpcResult<()>;
 }
 
 /// A high-level audio playing facility that
@@ -35,6 +39,7 @@ pub trait AudioPlayerServiceRpc {
 pub struct AudioPlayerService {
 	shared_graph: SharedAudioGraph,
 	src_node: NodeIndex,
+	volume_node: NodeIndex,
 	engine: BackgroundEngine
 }
 
@@ -46,18 +51,21 @@ impl AudioPlayerService {
 	/// engines) only query its output.
 	pub fn constructing_graph(shared_graph: SharedAudioGraph, engine: BackgroundEngine) -> AudioPlayerService {
 		let src_node: NodeIndex;
+		let volume_node: NodeIndex;
 		{
 			// Initialize audio graph
 			let mut graph = shared_graph.lock().unwrap();
 
 			let master_node = graph.add_node(DspNode::Empty);
-			src_node = graph.add_input(DspNode::Empty, master_node).1;
+			volume_node = graph.add_input(DspNode::Empty, master_node).1;
+			src_node = graph.add_input(DspNode::Empty, volume_node).1;
 
 			graph.set_master(Some(master_node));
 		}
 		AudioPlayerService {
 			shared_graph: shared_graph,
 			src_node: src_node,
+			volume_node: volume_node,
 			engine: engine,
 		}
 	}
@@ -89,6 +97,13 @@ impl AudioPlayerServiceRpc for AudioPlayerService {
 	
 	fn pause(&self) -> RpcResult<()> {
 		self.engine.controls.send(ControlMsg::Pause);
+		Ok(())
+	}
+	
+	fn set_volume(&self, volume: f32) -> RpcResult<()> {
+		let mut graph = self.shared_graph.lock().unwrap();
+		let volume_ref = graph.node_mut(self.volume_node).expect("Audio graph has no volume node");
+		*volume_ref = DspNode::Volume(volume);
 		Ok(())
 	}
 }
