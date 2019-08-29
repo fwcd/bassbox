@@ -9,8 +9,12 @@ use crate::audioformat::{StandardFrame, empty_standard_frame};
 pub enum DspNode {
 	Empty,
 	Silence,
-	Source(Converter<Box<dyn Iterator<Item=StandardFrame> + Send>>),
-	Pauser(bool)
+	Source { src: Converter<Box<dyn Iterator<Item=StandardFrame> + Send>>, state: PauseState },
+}
+
+pub enum PauseState {
+	Paused,
+	Playing
 }
 
 impl Node<StandardFrame> for DspNode {
@@ -18,15 +22,13 @@ impl Node<StandardFrame> for DspNode {
 		match *self {
 			Self::Empty => (),
 			Self::Silence => silence(buffer),
-			Self::Source(ref mut src) => {
-				for i in 0..buffer.len() {
-					buffer[i] = src.next().unwrap_or_else(|| empty_standard_frame());
-				}
-			},
-			Self::Pauser(paused) => {
-				if paused {
-					silence(buffer)
-				} // otherwise leave the buffer unchanged
+			Self::Source { ref mut src, ref state } => match state {
+				PauseState::Playing => {
+					for i in 0..buffer.len() {
+						buffer[i] = src.next().unwrap_or_else(|| empty_standard_frame());
+					}
+				},
+				PauseState::Paused => silence(buffer)
 			}
 		}
 	}

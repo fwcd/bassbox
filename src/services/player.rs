@@ -7,8 +7,8 @@ use dsp::NodeIndex;
 use dsp::sample::rate::Converter;
 use crate::source::{AudioSource, mp3::Mp3Source};
 use crate::graph::SharedAudioGraph;
-use crate::processing::DspNode;
-use crate::engine::{BackgroundEngine, ControlMsg};
+use crate::processing::{DspNode, PauseState};
+use crate::engine::BackgroundEngine;
 
 /// The audio playing service methods exposed via JSON-RPC.
 #[rpc]
@@ -49,14 +49,16 @@ impl AudioPlayerService {
 		{
 			// Initialize audio graph
 			let mut graph = shared_graph.lock().unwrap();
-			let master = graph.add_node(DspNode::Empty);
-			src_node = graph.add_input(DspNode::Empty, master).1;
-			graph.set_master(Some(master));
+
+			let master_node = graph.add_node(DspNode::Empty);
+			src_node = graph.add_input(DspNode::Empty, master_node).1;
+
+			graph.set_master(Some(master_node));
 		}
 		AudioPlayerService {
 			shared_graph: shared_graph,
 			src_node: src_node,
-			engine: engine
+			engine: engine,
 		}
 	}
 }
@@ -72,16 +74,27 @@ impl AudioPlayerServiceRpc for AudioPlayerService {
 		let src_ref = graph.node_mut(self.src_node).expect("Audio graph has no source node");
 		
 		// TODO: Queueing?
-		*src_ref = DspNode::Source(Converter::from_hz_to_hz(Box::new(source), source_hz, self.engine.sample_hz));
+		*src_ref = DspNode::Source {
+			src: Converter::from_hz_to_hz(Box::new(source), source_hz, self.engine.sample_hz),
+			state: PauseState::Playing
+		};
 		
 		Ok(())
 	}
 	
 	fn play(&self) -> RpcResult<()> {
+		let mut graph = self.shared_graph.lock().unwrap();
+		if let DspNode::Source { ref mut state, .. } = graph.node_mut(self.src_node).expect("Audio graph has no pauser") {
+			*state = PauseState::Playing;
+		}
 		Ok(())
 	}
 	
 	fn pause(&self) -> RpcResult<()> {
+		let mut graph = self.shared_graph.lock().unwrap();
+		if let DspNode::Source { ref mut state, .. } = graph.node_mut(self.src_node).expect("Audio graph has no pauser") {
+			*state = PauseState::Paused;
+		}
 		Ok(())
 	}
 }
