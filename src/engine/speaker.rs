@@ -1,6 +1,8 @@
-use super::{AudioEngine, BackgroundEngine};
+use super::{AudioEngine, BackgroundEngine, EngineControls};
 use crate::audioformat::{StandardFrame, empty_standard_frame, STANDARD_CHANNELS, StandardSample};
 use crate::graph::SharedAudioGraph;
+use std::sync::mpsc;
+use std::thread;
 use dsp::Node;
 use dsp::sample::{Sample, Frame, FromSample, conv::ToFrameSliceMut};
 use cpal::{StreamData, UnknownTypeOutputBuffer, OutputBuffer};
@@ -23,15 +25,24 @@ impl AudioEngine for SpeakerEngine {
 		
 		if channels != STANDARD_CHANNELS {
 			// TODO
-			println!("CPAL output format has {} channels, but only exactly {} are supported currently.", channels, STANDARD_CHANNELS);
+			panic!("CPAL output format has {} channels, but only exactly {} are supported currently.", channels, STANDARD_CHANNELS);
 		}
 		
+		let (control_sender, control_receiver) = mpsc::sync_channel(1);
 		event_loop.play_stream(stream_id.clone()).expect("Could not play stream.");
-		std::thread::spawn(move || {
-			event_loop.run(move |_, result| {
+
+		thread::spawn(move || {
+			event_loop.run(move |_id, result| {
 				let mut data = result.expect("Error while streaming.");
 				let sample_count = buffer_sample_count(&data).unwrap_or(0);
 				let frame_count = sample_count / STANDARD_CHANNELS;
+				
+				// Possibly receive a control operation message
+				if let Ok(msg) = control_receiver.try_recv() {
+					match msg {
+						_ => println!("Control message not recognized by the speaker/CPAL engine: {:?}", msg)
+					}
+				}
 				
 				// Read audio from graph into temporary buffer
 				let mut audio: Vec<StandardFrame> = vec![empty_standard_frame(); frame_count];
@@ -46,7 +57,7 @@ impl AudioEngine for SpeakerEngine {
 			});
 		});
 
-		BackgroundEngine { sample_hz: sample_hz }
+		BackgroundEngine { sample_hz: sample_hz, controls: EngineControls::new(control_sender) }
 	}
 }
 

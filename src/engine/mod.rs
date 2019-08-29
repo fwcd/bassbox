@@ -4,6 +4,7 @@
 pub mod speaker;
 
 use crate::graph::SharedAudioGraph;
+use std::sync::mpsc;
 
 /// A blocking audio playing engine.
 pub trait AudioEngine {
@@ -14,7 +15,35 @@ pub trait AudioEngine {
 /// Represents an engine running asynchronously
 /// in the background. Usually returned after
 /// starting the engine.
+#[derive(Clone)]
 pub struct BackgroundEngine {
 	/// The output sample rate
-	pub sample_hz: f64
+	pub sample_hz: f64,
+	pub controls: EngineControls
+}
+
+/// A single control operation which can be
+/// sent to an engine through EngineControls.
+#[derive(Debug)]
+pub enum ControlMsg {
+	// TODO: Figure out some use case
+}
+
+/// A wrapper around an MPSC channel that
+/// allows you to send a control (message)
+/// to the engine.
+#[derive(Clone)]
+pub struct EngineControls {
+	tx: mpsc::SyncSender<ControlMsg>
+}
+
+impl EngineControls {
+	pub fn new(tx: mpsc::SyncSender<ControlMsg>) -> EngineControls {
+		EngineControls { tx: tx }
+	}
+	
+	/// Sends a control message to the engine.
+	pub fn send(&self, msg: ControlMsg) {
+		self.tx.send(msg).expect("Could not send control message")
+	}
 }

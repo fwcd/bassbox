@@ -8,7 +8,7 @@ use dsp::sample::rate::Converter;
 use crate::source::{AudioSource, mp3::Mp3Source};
 use crate::graph::SharedAudioGraph;
 use crate::processing::DspNode;
-use crate::engine::BackgroundEngine;
+use crate::engine::{BackgroundEngine, ControlMsg};
 
 /// The audio playing service methods exposed via JSON-RPC.
 #[rpc]
@@ -26,6 +26,12 @@ pub trait AudioPlayerServiceRpc {
 	fn pause(&self) -> RpcResult<()>;
 }
 
+/// A high-level audio playing facility that
+/// abstracts the audio graph by providing convenient
+/// queueing operations.
+/// 
+/// TODO: Provide a lower-level RPC service that allows
+///       direct manipulation of the audio graph.
 pub struct AudioPlayerService {
 	shared_graph: SharedAudioGraph,
 	src_node: NodeIndex,
@@ -72,16 +78,10 @@ impl AudioPlayerServiceRpc for AudioPlayerService {
 	}
 	
 	fn play(&self) -> RpcResult<()> {
-		// self.sink.play();
-		
-		// TODO!
 		Ok(())
 	}
 	
 	fn pause(&self) -> RpcResult<()> {
-		// self.sink.pause();
-		
-		// TODO!
 		Ok(())
 	}
 }
