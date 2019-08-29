@@ -3,10 +3,10 @@
 
 pub mod speaker;
 
-use crate::context::AudioContext;
+use crate::graph::SharedAudioGraph;
 
 /// A blocking audio playing engine.
 pub trait AudioEngine {
 	/// Runs the engine and takes control over the thread.
-	fn run(self, context: AudioContext);
+	fn run(self, context: SharedAudioGraph);
 }

@@ -3,7 +3,7 @@ use jsonrpc_derive::rpc;
 use super::rpcutils::server_error;
 use std::fs::File;
 use std::io::BufReader;
-use crate::context::AudioContext;
+use crate::graph::SharedAudioGraph;
 
 /// The audio playing service methods exposed via JSON-RPC.
 #[rpc]
@@ -22,12 +22,12 @@ pub trait AudioPlayerServiceRpc {
 }
 
 pub struct AudioPlayerService {
-	context: AudioContext
+	shared_graph: SharedAudioGraph
 }
 
 impl AudioPlayerService {
-	pub fn with_context(context: AudioContext) -> AudioPlayerService {
-		AudioPlayerService { context: context }
+	pub fn with_shared_graph(shared_graph: SharedAudioGraph) -> AudioPlayerService {
+		AudioPlayerService { shared_graph: shared_graph }
 	}
 }
 

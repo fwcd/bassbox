@@ -1,8 +1,10 @@
 //! Defines a default output format that is used
 //! internally by the DSP processing.
 
-pub type Output = f32;
-pub const CHANNELS: usize = 2;
-pub type Frame = [Output; CHANNELS];
+use dsp::Frame;
 
-pub fn empty_frame() -> Frame { [0.0, 0.0] }
+pub type StandardOutput = f32;
+pub const STANDARD_CHANNELS: usize = 2;
+pub type StandardFrame = [StandardOutput; STANDARD_CHANNELS];
+
+pub fn empty_standard_frame() -> StandardFrame { StandardFrame::equilibrium() }

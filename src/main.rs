@@ -1,10 +1,11 @@
 mod engines;
 mod services;
 mod processing;
-mod context;
+mod source;
+mod graph;
 mod audioformat;
 
-use context::AudioContext;
+use graph::SharedAudioGraph;
 use engines::{AudioEngine, speaker::SpeakerEngine};
 use getopts::Options;
 use services::player::{AudioPlayerServiceRpc, AudioPlayerService};
@@ -36,23 +37,23 @@ fn main() {
 	let engine_str = parsed_args.opt_str("e");
 	
 	// Spawn engine
-	let context = AudioContext::new();
-	let context_clone = context.clone();
+	let shared_graph = SharedAudioGraph::new();
+	let shared_graph_clone = shared_graph.clone();
 
 	thread::spawn(move || {
 		match engine_str.unwrap().as_str() {
-			"speaker" => run_engine(SpeakerEngine, context_clone),
+			"speaker" => run_engine(SpeakerEngine, shared_graph_clone),
 			_ => println!("Unrecognized engine, try one of these: {:?}.", supported_engines)
 		};
 	});
 
 	// Setup RPC
 	let mut io = IoHandler::default();
-	io.extend_with(AudioPlayerService::with_context(context).to_delegate());
+	io.extend_with(AudioPlayerService::with_shared_graph(shared_graph).to_delegate());
 	
 	ServerBuilder::new(io).build();
 }
 
-fn run_engine(engine: impl AudioEngine, context: AudioContext) {
+fn run_engine(engine: impl AudioEngine, context: SharedAudioGraph) {
 	engine.run(context);
 }

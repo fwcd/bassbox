@@ -1,8 +1,7 @@
 use super::AudioEngine;
-use crate::audioformat::{Frame, empty_frame, CHANNELS};
-use crate::context::AudioContext;
-use std::sync::atomic::Ordering;
-use dsp::Node;
+use crate::audioformat::{StandardFrame, empty_standard_frame, STANDARD_CHANNELS};
+use crate::graph::SharedAudioGraph;
+use dsp::{Node, sample::Sample};
 use cpal::{StreamData, UnknownTypeOutputBuffer};
 use cpal::traits::{DeviceTrait, EventLoopTrait, HostTrait};
 
@@ -11,7 +10,7 @@ use cpal::traits::{DeviceTrait, EventLoopTrait, HostTrait};
 pub struct SpeakerEngine;
 
 impl AudioEngine for SpeakerEngine {
-	fn run(self, context: AudioContext) {
+	fn run(self, shared_graph: SharedAudioGraph) {
 		// Setup CPAL
 		let host = cpal::default_host();
 		let event_loop = host.event_loop();
@@ -21,12 +20,13 @@ impl AudioEngine for SpeakerEngine {
 		let stream_id = event_loop.build_output_stream(&device, &format).expect("Could not build output stream");
 		
 		event_loop.play_stream(stream_id.clone()).expect("Could not play stream.");
-		event_loop.run(move |id, result| {
+		event_loop.run(move |_, result| {
 			let data = result.expect("Error while streaming.");
-			let mut req_buffer: Vec<Frame> = vec![empty_frame(); buffer_size(&data).expect("Not output data.")];
+			let mut req_buffer: Vec<StandardFrame> = vec![empty_standard_frame(); buffer_size(&data).expect("Not output data.")];
 			
 			// Read audio into temporary buffer
-			context.graph.lock().unwrap().audio_requested(&mut req_buffer, sample_rate);
+			shared_graph.graph.lock().unwrap().audio_requested(&mut req_buffer, sample_rate);
+			write_audio(&req_buffer, data);
 		});
 	}
 }
@@ -43,25 +43,25 @@ fn buffer_size(data: &StreamData) -> Option<usize> {
 
 /// Writes the audio to the speaker possibly converting
 /// to a different format on-the-fly.
-fn write_audio(audio: &[Frame], data: StreamData) {
+fn write_audio(audio: &[StandardFrame], data: StreamData) {
 	match data {
 		StreamData::Output { buffer: UnknownTypeOutputBuffer::U16(mut buffer) } => {
-			for (i, sample) in buffer.chunks_mut(CHANNELS).enumerate() {
-				for (j, c) in sample.iter_mut().enumerate() {
-					*c = ((audio[i][j] * 0.5 + 0.5) * std::u16::MAX as f32) as u16;
+			for (i, frame) in buffer.chunks_mut(STANDARD_CHANNELS).enumerate() {
+				for (j, c) in frame.iter_mut().enumerate() {
+					*c = audio[i][j].to_sample();
 				}
 			}
 		},
 		StreamData::Output { buffer: UnknownTypeOutputBuffer::I16(mut buffer) } => {
-			for (i, sample) in buffer.chunks_mut(CHANNELS).enumerate() {
-				for (j, c) in sample.iter_mut().enumerate() {
-					*c = (audio[i][j] * std::i16::MAX as f32) as i16;
+			for (i, frame) in buffer.chunks_mut(STANDARD_CHANNELS).enumerate() {
+				for (j, c) in frame.iter_mut().enumerate() {
+					*c = audio[i][j].to_sample();
 				}
 			}
 		},
 		StreamData::Output { buffer: UnknownTypeOutputBuffer::F32(mut buffer) } => {
-			for (i, sample) in buffer.chunks_mut(CHANNELS).enumerate() {
-				for (j, c) in sample.iter_mut().enumerate() {
+			for (i, frame) in buffer.chunks_mut(STANDARD_CHANNELS).enumerate() {
+				for (j, c) in frame.iter_mut().enumerate() {
 					*c = audio[i][j];
 				}
 			}
