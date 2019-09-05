@@ -13,24 +13,24 @@ pub trait Filter {
 
 /// A filter that only lets low frequencies pass through.
 pub struct LowpassFilter {
-	delayLine: VecDeque<StandardFrame>,
+	last: VecDeque<StandardFrame>, // TODO: Migrate to sample::ring_buffer::Bounded once avilable in dsp-chain
 	length: usize
 }
 
 impl LowpassFilter {
 	pub fn new() -> LowpassFilter {
 		let length: usize = 5;
-		LowpassFilter { delayLine: VecDeque::with_capacity(length), length: length }
+		LowpassFilter { last: VecDeque::with_capacity(length), length: length }
 	}
 }
 
 impl Filter for LowpassFilter {
 	fn apply(&mut self, frame: StandardFrame) -> StandardFrame {
-		if self.delayLine.len() == self.length {
-			self.delayLine.pop_front();
+		if self.last.len() == self.length {
+			self.last.pop_front();
 		}
-		self.delayLine.push_back(frame);
-		let out = self.delayLine.iter().fold(empty_standard_frame(), |a, b| a.add_amp(*b));
+		self.last.push_back(frame);
+		let out = self.last.iter().fold(empty_standard_frame(), |a, b| a.add_amp(*b));
 		return out.scale_amp(1.0 / (self.length as f32));
 	}
 }
