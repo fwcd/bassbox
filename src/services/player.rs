@@ -7,7 +7,7 @@ use dsp::NodeIndex;
 use dsp::sample::rate::Converter;
 use crate::source::{AudioSource, mp3::Mp3Source};
 use crate::graph::SharedAudioGraph;
-use crate::processing::{DspNode, PauseState, filter::LowpassFilter};
+use crate::processing::{DspNode, PauseState, filter::{Disableable, LowpassFilter}};
 use crate::engine::{BackgroundEngine, ControlMsg};
 
 /// The audio playing service methods exposed via JSON-RPC.
@@ -63,7 +63,7 @@ impl AudioPlayerService {
 			let mut graph = shared_graph.lock().unwrap();
 
 			let master_node = graph.add_node(DspNode::Empty);
-			lowpass_node = graph.add_input(DspNode::Filter { filter: Box::new(LowpassFilter::new()), enabled: false }, master_node).1;
+			lowpass_node = graph.add_input(DspNode::Lowpass(Disableable::disabled(LowpassFilter::new())), master_node).1;
 			volume_node = graph.add_input(DspNode::Empty, lowpass_node).1;
 			src_node = graph.add_input(DspNode::Empty, volume_node).1;
 
@@ -115,11 +115,11 @@ impl AudioPlayerServiceRpc for AudioPlayerService {
 		Ok(())
 	}
 	
-	fn set_lowpass_enabled(&self, new_enabled: bool) -> RpcResult<()> {
+	fn set_lowpass_enabled(&self, enabled: bool) -> RpcResult<()> {
 		let mut graph = self.shared_graph.lock().unwrap();
 		let lowpass_ref = graph.node_mut(self.lowpass_node).expect("Audio graph has no lowpass node");
-		if let DspNode::Filter { ref mut enabled, .. } = lowpass_ref {
-			*enabled = new_enabled
+		if let DspNode::Lowpass(Disableable { ref mut disabled, .. }) = lowpass_ref {
+			*disabled = !enabled;
 		}
 		Ok(())
 	}
