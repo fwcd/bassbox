@@ -6,7 +6,7 @@ pub mod filter;
 use dsp::Node;
 use dsp::sample::rate::Converter;
 use dsp::sample::Frame;
-use filter::{Filter, LowpassFilter};
+use filter::Filter;
 use crate::audioformat::{StandardFrame, empty_standard_frame};
 
 /// An audio processing node which can either be a source
@@ -22,7 +22,7 @@ pub enum DspNode {
 	Silence,
 	Source { src: Converter<Box<dyn Iterator<Item=StandardFrame> + Send>>, state: PauseState },
 	Volume(f32),
-	Lowpass(LowpassFilter)
+	Filter { filter: Box<dyn Filter + Send>, enabled: bool }
 }
 
 /// A state of playback.
@@ -45,7 +45,10 @@ impl Node<StandardFrame> for DspNode {
 				PauseState::Paused => silence(buffer)
 			},
 			Self::Volume(factor) => dsp::slice::map_in_place(buffer, |frame| frame.scale_amp(factor)),
-			Self::Lowpass(ref mut filter) => dsp::slice::map_in_place(buffer, |frame| filter.apply(frame))
+			Self::Filter { ref mut filter, enabled } => dsp::slice::map_in_place(buffer, |frame| {
+				let output = filter.apply(frame);
+				if enabled { output } else { frame }
+			})
 		}
 	}
 }

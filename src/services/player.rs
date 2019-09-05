@@ -7,7 +7,7 @@ use dsp::NodeIndex;
 use dsp::sample::rate::Converter;
 use crate::source::{AudioSource, mp3::Mp3Source};
 use crate::graph::SharedAudioGraph;
-use crate::processing::{DspNode, PauseState};
+use crate::processing::{DspNode, PauseState, filter::LowpassFilter};
 use crate::engine::{BackgroundEngine, ControlMsg};
 
 /// The audio playing service methods exposed via JSON-RPC.
@@ -28,6 +28,10 @@ pub trait AudioPlayerServiceRpc {
 	/// Controls volume
 	#[rpc(name = "audioPlayer.setVolume")]
 	fn set_volume(&self, volume: f32) -> RpcResult<()>;
+	
+	/// Enables or disables the lowpass filter
+	#[rpc(name = "audioPlayer.setLowpassEnabled")]
+	fn set_lowpass_enabled(&self, enabled: bool) -> RpcResult<()>;
 }
 
 /// A high-level audio playing facility that
@@ -40,6 +44,7 @@ pub struct AudioPlayerService {
 	shared_graph: SharedAudioGraph,
 	src_node: NodeIndex,
 	volume_node: NodeIndex,
+	lowpass_node: NodeIndex,
 	engine: BackgroundEngine
 }
 
@@ -52,12 +57,14 @@ impl AudioPlayerService {
 	pub fn constructing_graph(shared_graph: SharedAudioGraph, engine: BackgroundEngine) -> AudioPlayerService {
 		let src_node: NodeIndex;
 		let volume_node: NodeIndex;
+		let lowpass_node: NodeIndex;
 		{
 			// Initialize audio graph
 			let mut graph = shared_graph.lock().unwrap();
 
 			let master_node = graph.add_node(DspNode::Empty);
-			volume_node = graph.add_input(DspNode::Empty, master_node).1;
+			lowpass_node = graph.add_input(DspNode::Filter { filter: Box::new(LowpassFilter::new()), enabled: false }, master_node).1;
+			volume_node = graph.add_input(DspNode::Empty, lowpass_node).1;
 			src_node = graph.add_input(DspNode::Empty, volume_node).1;
 
 			graph.set_master(Some(master_node));
@@ -66,6 +73,7 @@ impl AudioPlayerService {
 			shared_graph: shared_graph,
 			src_node: src_node,
 			volume_node: volume_node,
+			lowpass_node: lowpass_node,
 			engine: engine,
 		}
 	}
@@ -104,6 +112,15 @@ impl AudioPlayerServiceRpc for AudioPlayerService {
 		let mut graph = self.shared_graph.lock().unwrap();
 		let volume_ref = graph.node_mut(self.volume_node).expect("Audio graph has no volume node");
 		*volume_ref = DspNode::Volume(volume);
+		Ok(())
+	}
+	
+	fn set_lowpass_enabled(&self, new_enabled: bool) -> RpcResult<()> {
+		let mut graph = self.shared_graph.lock().unwrap();
+		let lowpass_ref = graph.node_mut(self.lowpass_node).expect("Audio graph has no lowpass node");
+		if let DspNode::Filter { ref mut enabled, .. } = lowpass_ref {
+			*enabled = new_enabled
+		}
 		Ok(())
 	}
 }
