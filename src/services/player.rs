@@ -63,8 +63,8 @@ impl AudioPlayerService {
 			let mut graph = shared_graph.lock().unwrap();
 
 			let master_node = graph.add_node(DspNode::Empty);
-			lowpass_node = graph.add_input(DspNode::Lowpass(Disableable::disabled(LowpassFilter::new())), master_node).1;
-			volume_node = graph.add_input(DspNode::Empty, lowpass_node).1;
+			volume_node = graph.add_input(DspNode::Empty, master_node).1;
+			lowpass_node = graph.add_input(DspNode::Lowpass(Disableable::disabled(LowpassFilter::new())), volume_node).1;
 			src_node = graph.add_input(DspNode::Empty, volume_node).1;
 
 			graph.set_master(Some(master_node));
