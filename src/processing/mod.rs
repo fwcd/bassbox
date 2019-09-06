@@ -15,7 +15,7 @@ use crate::audioformat::{StandardFrame, empty_standard_frame};
 /// 
 /// _Generally_ all intermediate operations that perform modifications
 /// on the audio source (like pausing playback) should either
-/// be implemented as a parameter of `DspNode::Source` or in an
+/// be implemented as a parameter of `DspNode::DynSource` or in an
 /// `AudioSource` implementation wrapping another `AudioSource`.
 pub enum DspNode {
 	Empty,
