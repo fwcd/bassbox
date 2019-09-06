@@ -3,6 +3,7 @@
 use crate::audioformat::{StandardFrame, OpsExt, empty_standard_frame};
 use dsp::sample::Frame;
 use std::collections::VecDeque;
+use std::f32;
 
 /// A facility that processes audio on a frame-by-frame
 /// basis, possibly maintaining state across calls.
@@ -16,16 +17,25 @@ pub trait Filter {
 /// The implementation roughly follows:
 /// - https://en.wikipedia.org/wiki/Low-pass_filter#Simple_infinite_impulse_response_filter
 pub struct IIRLowpassFilter {
-	last_input: StandardFrame,
 	last_output: StandardFrame,
 	/// The smoothing factor
 	alpha: f32
 }
 
+impl IIRLowpassFilter {
+	pub fn with_cutoff_freq(cutoff_hz: f32, sample_hz: f64) -> IIRLowpassFilter {
+		let x = 2.0 * f32::consts::PI * (cutoff_hz / sample_hz as f32);
+		IIRLowpassFilter {
+			last_output: empty_standard_frame(),
+			alpha: x / (x + 1.0)
+		}
+	}
+}
+
 impl Filter for IIRLowpassFilter {
 	fn apply(&mut self, input: StandardFrame) -> StandardFrame {
-		// y[i] = y[i - 1] + alpha * (x[i] - x[i - 1])
-		let output = self.last_output.add((input.sub(self.last_input)).scale(self.alpha));
+		// y[i] = y[i - 1] + alpha * (x[i] - y[i - 1])
+		let output = self.last_output.add((input.sub(self.last_output)).scale(self.alpha));
 		self.last_output = output;
 		output
 	}
@@ -45,6 +55,7 @@ impl Filter for IIRHighpassFilter {
 	fn apply(&mut self, input: StandardFrame) -> StandardFrame {
 		// y[i] = alpha * (y[i - 1] + x[i] - x[i - 1])
 		let output = self.last_output.add(input).sub(self.last_input).scale(self.alpha);
+		self.last_input = input;
 		self.last_output = output;
 		output
 	}
