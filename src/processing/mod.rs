@@ -37,9 +37,9 @@ pub enum PauseState {
 impl Node<StandardFrame> for DspNode {
 	fn audio_requested(&mut self, buffer: &mut [StandardFrame], _sample_hz: f64) {
 		match *self {
-			Self::Empty => (),
-			Self::Silence => silence(buffer),
-			Self::Source { ref mut src, ref state } => match state {
+			DspNode::Empty => (),
+			DspNode::Silence => silence(buffer),
+			DspNode::Source { ref mut src, ref state } => match state {
 				PauseState::Playing => {
 					for i in 0..buffer.len() {
 						buffer[i] = src.next().unwrap_or_else(|| empty_standard_frame());
@@ -47,12 +47,12 @@ impl Node<StandardFrame> for DspNode {
 				},
 				PauseState::Paused => silence(buffer)
 			},
-			Self::Volume(factor) => dsp::slice::map_in_place(buffer, |frame| frame.scale_amp(factor)),
+			DspNode::Volume(factor) => dsp::slice::map_in_place(buffer, |frame| frame.scale_amp(factor)),
 			// Static filter implementations to avoid boxing:
-			Self::MovingAverage(ref mut filter) => apply_filter(buffer, filter),
-			Self::IIRLowpass(ref mut filter) => apply_filter(buffer, filter),
-			Self::IIRHighpass(ref mut filter) => apply_filter(buffer, filter),
-			Self::DynFilter(ref mut filter) => apply_filter(buffer, filter)
+			DspNode::MovingAverage(ref mut filter) => apply_filter(buffer, filter),
+			DspNode::IIRLowpass(ref mut filter) => apply_filter(buffer, filter),
+			DspNode::IIRHighpass(ref mut filter) => apply_filter(buffer, filter),
+			DspNode::DynFilter(ref mut filter) => apply_filter(buffer, filter)
 		}
 	}
 }
