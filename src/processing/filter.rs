@@ -141,7 +141,7 @@ impl Filter for MovingAverageFilter {
 /// A disableable filter that lets the original signal
 /// "pass-through" if disabled.
 pub struct Disableable<F> {
-	wrapped: F,
+	pub wrapped: F,
 	pub disabled: bool
 }
 

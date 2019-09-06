@@ -3,7 +3,7 @@ use jsonrpc_derive::rpc;
 use serde::{Serialize, Deserialize};
 use dsp::Graph;
 use crate::audioformat::StandardFrame;
-use crate::processing::DspNode;
+use crate::processing::{DspNode, filter::{Disableable, CutoffFreq}};
 use crate::graph::SharedAudioGraph;
 
 #[derive(Serialize, Deserialize)]
@@ -12,9 +12,9 @@ pub enum RpcNode {
 	Empty,
 	Silence,
 	DynSource,
-	Volume,
-	IIRLowpass, // TODO: Store cutoff_hz by value here
-	IIRHighpass, // TODO: Store cutoff_hz by value here
+	Volume(f32),
+	IIRLowpass { cutoff_hz: f32 }, // TODO: Store cutoff_hz by value here
+	IIRHighpass { cutoff_hz: f32 }, // TODO: Store cutoff_hz by value here
 	DynFilter,
 	Other
 }
@@ -25,9 +25,9 @@ impl RpcNode {
 			DspNode::Empty => RpcNode::Empty,
 			DspNode::Silence => RpcNode::Silence,
 			DspNode::DynSource { .. } => RpcNode::DynSource,
-			DspNode::Volume(..) => RpcNode::Volume,
-			DspNode::IIRLowpass { .. } => RpcNode::IIRLowpass,
-			DspNode::IIRHighpass { .. } => RpcNode::IIRHighpass,
+			DspNode::Volume(volume) => RpcNode::Volume(volume),
+			DspNode::IIRLowpass(Disableable { wrapped: ref filter, .. }) => RpcNode::IIRLowpass { cutoff_hz: filter.cutoff_hz() },
+			DspNode::IIRHighpass(Disableable { wrapped: ref filter, .. }) => RpcNode::IIRHighpass { cutoff_hz: filter.cutoff_hz() },
 			DspNode::DynFilter(..) => RpcNode::DynFilter,
 			_ => RpcNode::Other
 		}
@@ -74,7 +74,7 @@ pub struct AudioGraphService {
 }
 
 impl AudioGraphService {
-	pub fn with_graph(shared_graph: SharedAudioGraph) -> AudioGraphService {
+	pub fn using_graph(shared_graph: SharedAudioGraph) -> AudioGraphService {
 		AudioGraphService { shared_graph: shared_graph }
 	}
 }

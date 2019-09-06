@@ -70,8 +70,8 @@ impl AudioPlayerService {
 
 			let master_node = graph.add_node(DspNode::Empty);
 			volume_node = graph.add_input(DspNode::Empty, master_node).1;
-			lowpass_node = graph.add_input(DspNode::IIRLowpass(Disableable::disabled(IIRLowpassFilter::with_cutoff_hz(500.0, engine.sample_hz))), volume_node).1;
-			highpass_node = graph.add_input(DspNode::IIRHighpass(Disableable::disabled(IIRHighpassFilter::with_cutoff_hz(13_000.0, engine.sample_hz))), lowpass_node).1;
+			lowpass_node = graph.add_input(DspNode::IIRLowpass(Disableable::disabled(IIRLowpassFilter::from_cutoff_hz(500.0, engine.sample_hz))), volume_node).1;
+			highpass_node = graph.add_input(DspNode::IIRHighpass(Disableable::disabled(IIRHighpassFilter::from_cutoff_hz(13_000.0, engine.sample_hz))), lowpass_node).1;
 			src_node = graph.add_input(DspNode::Empty, highpass_node).1;
 
 			graph.set_master(Some(master_node));
