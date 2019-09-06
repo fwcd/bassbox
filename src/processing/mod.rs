@@ -6,7 +6,7 @@ pub mod filter;
 use dsp::Node;
 use dsp::sample::rate::Converter;
 use dsp::sample::Frame;
-use filter::{Filter, LowpassFilter, Disableable};
+use filter::{Filter, MovingAverageFilter, IIRLowpassFilter, IIRHighpassFilter, Disableable};
 use crate::audioformat::{StandardFrame, empty_standard_frame};
 
 /// An audio processing node which can either be a source
@@ -22,7 +22,9 @@ pub enum DspNode {
 	Silence,
 	Source { src: Converter<Box<dyn Iterator<Item=StandardFrame> + Send>>, state: PauseState },
 	Volume(f32),
-	Lowpass(Disableable<LowpassFilter>),
+	MovingAverage(Disableable<MovingAverageFilter>),
+	IIRLowpass(Disableable<IIRLowpassFilter>),
+	IIRHighpass(Disableable<IIRHighpassFilter>),
 	DynFilter(Box<dyn Filter + Send>)
 }
 
@@ -46,7 +48,10 @@ impl Node<StandardFrame> for DspNode {
 				PauseState::Paused => silence(buffer)
 			},
 			Self::Volume(factor) => dsp::slice::map_in_place(buffer, |frame| frame.scale_amp(factor)),
-			Self::Lowpass(ref mut filter) => apply_filter(buffer, filter),
+			// Static filter implementations to avoid boxing:
+			Self::MovingAverage(ref mut filter) => apply_filter(buffer, filter),
+			Self::IIRLowpass(ref mut filter) => apply_filter(buffer, filter),
+			Self::IIRHighpass(ref mut filter) => apply_filter(buffer, filter),
 			Self::DynFilter(ref mut filter) => apply_filter(buffer, filter)
 		}
 	}

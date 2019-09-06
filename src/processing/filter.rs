@@ -8,30 +8,66 @@ use std::collections::VecDeque;
 /// basis, possibly maintaining state across calls.
 pub trait Filter {
 	/// Applies the filter to a single frame.
-	fn apply(&mut self, frame: StandardFrame) -> StandardFrame;
+	fn apply(&mut self, input: StandardFrame) -> StandardFrame;
 }
 
-/// A filter that only lets low frequencies pass through.
-pub struct LowpassFilter {
+/// A simple infinite impulse response (IIR) lowpass filter.
+/// 
+/// The implementation roughly follows:
+/// - https://en.wikipedia.org/wiki/Low-pass_filter#Simple_infinite_impulse_response_filter
+pub struct IIRLowpassFilter {
+	last_input: StandardFrame,
+	last_output: StandardFrame,
+	/// The smoothing factor
+	alpha: f32
+}
+
+impl Filter for IIRLowpassFilter {
+	fn apply(&mut self, input: StandardFrame) -> StandardFrame {
+		input // TODO: Implement this
+	}
+}
+
+/// A simple infinite impulse response (IIR) highpass filter.
+/// 
+/// The implementation roughly follows:
+/// - https://en.wikipedia.org/wiki/High-pass_filter#Discrete-time_realization
+pub struct IIRHighpassFilter {
+	last_input: StandardFrame,
+	last_output: StandardFrame,
+	alpha: f32
+}
+
+impl Filter for IIRHighpassFilter {
+	fn apply(&mut self, input: StandardFrame) -> StandardFrame {
+		input // TODO: Implement this
+	}
+}
+
+/// A basic filter averaging over the last n frames.
+/// The moving average filter is a very simple finite
+/// impulse response (FIR) filter and a kind of lowpass.
+/// For more control over the cutoff frequency, you
+/// can use the 'IIRFilter'.
+pub struct MovingAverageFilter {
 	last: VecDeque<StandardFrame>, // TODO: Migrate to sample::ring_buffer::Bounded once avilable in dsp-chain
 	length: usize
 }
 
-impl LowpassFilter {
-	pub fn new() -> LowpassFilter {
-		let length: usize = 5;
-		LowpassFilter { last: VecDeque::with_capacity(length), length: length }
+impl MovingAverageFilter {
+	pub fn new(length: usize) -> MovingAverageFilter {
+		MovingAverageFilter { last: VecDeque::with_capacity(length), length: length }
 	}
 }
 
-impl Filter for LowpassFilter {
-	fn apply(&mut self, frame: StandardFrame) -> StandardFrame {
+impl Filter for MovingAverageFilter {
+	fn apply(&mut self, input: StandardFrame) -> StandardFrame {
 		if self.last.len() == self.length {
 			self.last.pop_front();
 		}
-		self.last.push_back(frame);
-		let out = self.last.iter().fold(empty_standard_frame(), |a, b| a.add_amp(*b));
-		return out.scale_amp(1.0 / (self.length as f32));
+		self.last.push_back(input);
+		let output = self.last.iter().fold(empty_standard_frame(), |a, b| a.add_amp(*b));
+		return output.scale_amp(1.0 / (self.length as f32));
 	}
 }
 
@@ -49,14 +85,14 @@ impl<F> Disableable<F> {
 }
 
 impl<F> Filter for Disableable<F> where F: Filter {
-	fn apply(&mut self, frame: StandardFrame) -> StandardFrame {
-		let out = self.wrapped.apply(frame);
-		if self.disabled { frame } else { out }
+	fn apply(&mut self, input: StandardFrame) -> StandardFrame {
+		let output = self.wrapped.apply(input);
+		if self.disabled { input } else { output }
 	}
 }
 
 impl<F> Filter for Box<F> where F: Filter + ?Sized {
-	fn apply(&mut self, frame: StandardFrame) -> StandardFrame {
-		(**self).apply(frame)
+	fn apply(&mut self, input: StandardFrame) -> StandardFrame {
+		(**self).apply(input)
 	}
 }
