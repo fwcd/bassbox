@@ -9,33 +9,84 @@ pub type WouldCycle = dsp::WouldCycle;
 
 /// A wrapper around the dsp graph whose node
 /// indices remain stable after removals.
+/// 
+/// Note that _different_ nodes may get the _same_
+/// index if a node is removed and another one added.
+/// node indices should generally not outlive
+/// their referenced node.
 pub struct AudioGraph {
 	inner: dsp::Graph<StandardFrame, DspNode>,
-	free: Vec<bool>
+	free: Vec<bool>,
+	has_free: bool
 }
 
 impl AudioGraph {
 	pub fn new() -> AudioGraph {
-		AudioGraph { inner: dsp::Graph::new(), free: Vec::new() }
+		AudioGraph { inner: dsp::Graph::new(), free: Vec::new(), has_free: false }
 	}
 
-	/// Adds the given node to the graph in O(1)
+	/// Adds the given node to the graph in O(n)
 	pub fn add_node(&mut self, node: DspNode) -> NodeIndex {
-		let index = self.inner.add_node(node);
-		self.free.insert(index.index(), false);
-		index
+		if let Some(index) = self.take_free() {
+			let node_ref = self.inner.node_mut(index).expect("A free node index should still hold a (no longer used) node");
+			*node_ref = node;
+			index
+		} else {
+			let index = self.inner.add_node(node);
+			self.free.insert(index.index(), false);
+			index
+		}
 	}
 	
 	/// Adds the given edge to the graph
 	pub fn add_edge(&mut self, src: NodeIndex, dest: NodeIndex) -> Result<EdgeIndex, WouldCycle> {
 		self.inner.add_connection(src, dest)
 	}
-
+	
 	/// Adds the given new node and input edge to the graph	
 	pub fn add_input(&mut self, src: DspNode, dest: NodeIndex) -> (EdgeIndex, NodeIndex) {
-		let (edge_index, node_index) = self.inner.add_input(src, dest);
-		self.free.insert(node_index.index(), false);
+		let node_index = self.add_node(src);
+		let edge_index = self.add_edge(node_index, dest).expect("Adding an input edge with a new node should never cause a cycle");
 		(edge_index, node_index)
+	}
+	
+	/// Takes the next free index (if available) in O(n)
+	fn take_free(&mut self) -> Option<NodeIndex> {
+		if self.has_free {
+			let mut has_free = false;
+			let mut taken: Option<NodeIndex> = None;
+
+			for i in 0..self.node_count() {
+				if self.free[i] {
+					match taken {
+						Some(..) => has_free = true,
+						None => {
+							self.free[i] = false;
+							taken = Some(NodeIndex::new(i))
+						}
+					}
+				}
+			}
+
+			self.has_free = has_free;
+			taken
+		} else {
+			None
+		}
+	}
+	
+	/// Removes a node from the graph in O(1).
+	/// 
+	/// Note that this will not actually remove the node
+	/// from the underlying data structure, but rather
+	/// mark the node index as free to be overwritten
+	/// by a new node.
+	/// 
+	/// Any indices referring to the given node should
+	/// be dropped by now.
+	pub fn remove_node(&mut self, node: NodeIndex) {
+		self.free[node.index()] = true;
+		self.has_free = true;
 	}
 	
 	/// Checks whether the node at the given index exists
@@ -47,6 +98,9 @@ impl AudioGraph {
 			!self.free[i]
 		}
 	}
+	
+	/// The number of nodes in the graph
+	pub fn node_count(&self) -> usize { self.inner.node_count() }
 	
 	/// An immutable reference to the node at the given index
 	pub fn node(&self, node: NodeIndex) -> Option<&DspNode> {
