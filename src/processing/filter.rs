@@ -12,6 +12,13 @@ pub trait Filter {
 	fn apply(&mut self, input: StandardFrame) -> StandardFrame;
 }
 
+/// Anything that has a cutoff frequency
+pub trait CutoffFreq {
+	fn cutoff_hz(&self) -> f32;
+	
+	fn with_cutoff_hz(&self, cutoff_hz: f32) -> Self;
+}
+
 /// A simple infinite impulse response (IIR) lowpass filter.
 /// 
 /// The implementation roughly follows:
@@ -19,17 +26,32 @@ pub trait Filter {
 pub struct IIRLowpassFilter {
 	last_output: StandardFrame,
 	/// The smoothing factor
-	alpha: f32
+	alpha: f32,
+	cutoff_hz: f32,
+	sample_hz: f64,
 }
 
 impl IIRLowpassFilter {
-	// TODO: Add cutoff_hz setter and make this a trait
-	pub fn with_cutoff_hz(cutoff_hz: f32, sample_hz: f64) -> IIRLowpassFilter {
+	pub fn from_cutoff_hz(cutoff_hz: f32, sample_hz: f64) -> IIRLowpassFilter {
+		IIRLowpassFilter::new(empty_standard_frame(), cutoff_hz, sample_hz)
+	}
+
+	pub fn new(last_output: StandardFrame, cutoff_hz: f32, sample_hz: f64) -> IIRLowpassFilter {
 		let x = 2.0 * f32::consts::PI * (cutoff_hz / sample_hz as f32);
 		IIRLowpassFilter {
-			last_output: empty_standard_frame(),
-			alpha: x / (x + 1.0)
+			last_output: last_output,
+			alpha: x / (x + 1.0),
+			cutoff_hz: cutoff_hz,
+			sample_hz: sample_hz
 		}
+	}
+}
+
+impl CutoffFreq for IIRLowpassFilter {
+	fn cutoff_hz(&self) -> f32 { self.cutoff_hz }
+	
+	fn with_cutoff_hz(&self, cutoff_hz: f32) -> IIRLowpassFilter {
+		IIRLowpassFilter::new(self.last_output, cutoff_hz, self.sample_hz)
 	}
 }
 
@@ -49,18 +71,33 @@ impl Filter for IIRLowpassFilter {
 pub struct IIRHighpassFilter {
 	last_input: StandardFrame,
 	last_output: StandardFrame,
-	alpha: f32
+	alpha: f32,
+	cutoff_hz: f32,
+	sample_hz: f64
 }
 
 impl IIRHighpassFilter {
-	// TODO: Add cutoff_hz setter and make this a trait
-	pub fn with_cutoff_hz(cutoff_hz: f32, sample_hz: f64) -> IIRHighpassFilter {
+	pub fn from_cutoff_hz(cutoff_hz: f32, sample_hz: f64) -> IIRHighpassFilter {
+		IIRHighpassFilter::new(empty_standard_frame(), empty_standard_frame(), cutoff_hz, sample_hz)
+	}
+
+	pub fn new(last_input: StandardFrame, last_output: StandardFrame, cutoff_hz: f32, sample_hz: f64) -> IIRHighpassFilter {
 		let x = 2.0 * f32::consts::PI * (cutoff_hz / sample_hz as f32);
 		IIRHighpassFilter {
-			last_input: empty_standard_frame(),
-			last_output: empty_standard_frame(),
-			alpha: 1.0 / (1.0 + x)
+			last_input: last_input,
+			last_output: last_output,
+			alpha: 1.0 / (1.0 + x),
+			cutoff_hz: cutoff_hz,
+			sample_hz: sample_hz
 		}
+	}
+}
+
+impl CutoffFreq for IIRHighpassFilter {
+	fn cutoff_hz(&self) -> f32 { self.cutoff_hz }
+	
+	fn with_cutoff_hz(&self, cutoff_hz: f32) -> IIRHighpassFilter {
+		IIRHighpassFilter::new(self.last_input, self.last_output, cutoff_hz, self.sample_hz)
 	}
 }
 
