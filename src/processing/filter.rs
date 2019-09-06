@@ -23,7 +23,7 @@ pub struct IIRLowpassFilter {
 }
 
 impl IIRLowpassFilter {
-	pub fn with_cutoff_freq(cutoff_hz: f32, sample_hz: f64) -> IIRLowpassFilter {
+	pub fn with_cutoff_hz(cutoff_hz: f32, sample_hz: f64) -> IIRLowpassFilter {
 		let x = 2.0 * f32::consts::PI * (cutoff_hz / sample_hz as f32);
 		IIRLowpassFilter {
 			last_output: empty_standard_frame(),
@@ -49,6 +49,17 @@ pub struct IIRHighpassFilter {
 	last_input: StandardFrame,
 	last_output: StandardFrame,
 	alpha: f32
+}
+
+impl IIRHighpassFilter {
+	pub fn with_cutoff_hz(cutoff_hz: f32, sample_hz: f64) -> IIRHighpassFilter {
+		let x = 2.0 * f32::consts::PI * (cutoff_hz / sample_hz as f32);
+		IIRHighpassFilter {
+			last_input: empty_standard_frame(),
+			last_output: empty_standard_frame(),
+			alpha: 1.0 / (1.0 + x)
+		}
+	}
 }
 
 impl Filter for IIRHighpassFilter {

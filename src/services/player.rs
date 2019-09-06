@@ -7,7 +7,7 @@ use dsp::NodeIndex;
 use dsp::sample::rate::Converter;
 use crate::source::{AudioSource, mp3::Mp3Source};
 use crate::graph::SharedAudioGraph;
-use crate::processing::{DspNode, PauseState, filter::{Disableable, IIRLowpassFilter}};
+use crate::processing::{DspNode, PauseState, filter::{Disableable, IIRLowpassFilter, IIRHighpassFilter}};
 use crate::engine::{BackgroundEngine, ControlMsg};
 
 /// The audio playing service methods exposed via JSON-RPC.
@@ -32,6 +32,10 @@ pub trait AudioPlayerServiceRpc {
 	/// Enables or disables the lowpass filter
 	#[rpc(name = "audioPlayer.setLowpassEnabled")]
 	fn set_lowpass_enabled(&self, enabled: bool) -> RpcResult<()>;
+	
+	/// Enables or disables the highpass filter
+	#[rpc(name = "audioPlayer.setHighpassEnabled")]
+	fn set_highpass_enabled(&self, enabled: bool) -> RpcResult<()>;
 }
 
 /// A high-level audio playing facility that
@@ -45,6 +49,7 @@ pub struct AudioPlayerService {
 	src_node: NodeIndex,
 	volume_node: NodeIndex,
 	lowpass_node: NodeIndex,
+	highpass_node: NodeIndex,
 	engine: BackgroundEngine
 }
 
@@ -58,14 +63,16 @@ impl AudioPlayerService {
 		let src_node: NodeIndex;
 		let volume_node: NodeIndex;
 		let lowpass_node: NodeIndex;
+		let highpass_node: NodeIndex;
 		{
 			// Initialize audio graph
 			let mut graph = shared_graph.lock().unwrap();
 
 			let master_node = graph.add_node(DspNode::Empty);
 			volume_node = graph.add_input(DspNode::Empty, master_node).1;
-			lowpass_node = graph.add_input(DspNode::IIRLowpass(Disableable::disabled(IIRLowpassFilter::with_cutoff_freq(500.0, engine.sample_hz))), volume_node).1;
-			src_node = graph.add_input(DspNode::Empty, lowpass_node).1;
+			lowpass_node = graph.add_input(DspNode::IIRLowpass(Disableable::disabled(IIRLowpassFilter::with_cutoff_hz(500.0, engine.sample_hz))), volume_node).1;
+			highpass_node = graph.add_input(DspNode::IIRHighpass(Disableable::disabled(IIRHighpassFilter::with_cutoff_hz(13_000.0, engine.sample_hz))), lowpass_node).1;
+			src_node = graph.add_input(DspNode::Empty, highpass_node).1;
 
 			graph.set_master(Some(master_node));
 		}
@@ -74,6 +81,7 @@ impl AudioPlayerService {
 			src_node: src_node,
 			volume_node: volume_node,
 			lowpass_node: lowpass_node,
+			highpass_node: highpass_node,
 			engine: engine,
 		}
 	}
@@ -119,6 +127,15 @@ impl AudioPlayerServiceRpc for AudioPlayerService {
 		let mut graph = self.shared_graph.lock().unwrap();
 		let lowpass_ref = graph.node_mut(self.lowpass_node).expect("Audio graph has no lowpass node");
 		if let DspNode::IIRLowpass(Disableable { ref mut disabled, .. }) = lowpass_ref {
+			*disabled = !enabled;
+		}
+		Ok(())
+	}
+	
+	fn set_highpass_enabled(&self, enabled: bool) -> RpcResult<()> {
+		let mut graph = self.shared_graph.lock().unwrap();
+		let highpass_ref = graph.node_mut(self.highpass_node).expect("Audio graph has no highpass node");
+		if let DspNode::IIRHighpass(Disableable { ref mut disabled, .. }) = highpass_ref {
 			*disabled = !enabled;
 		}
 		Ok(())
