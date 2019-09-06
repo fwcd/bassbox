@@ -23,6 +23,7 @@ pub struct IIRLowpassFilter {
 }
 
 impl IIRLowpassFilter {
+	// TODO: Add cutoff_hz setter and make this a trait
 	pub fn with_cutoff_hz(cutoff_hz: f32, sample_hz: f64) -> IIRLowpassFilter {
 		let x = 2.0 * f32::consts::PI * (cutoff_hz / sample_hz as f32);
 		IIRLowpassFilter {
@@ -52,6 +53,7 @@ pub struct IIRHighpassFilter {
 }
 
 impl IIRHighpassFilter {
+	// TODO: Add cutoff_hz setter and make this a trait
 	pub fn with_cutoff_hz(cutoff_hz: f32, sample_hz: f64) -> IIRHighpassFilter {
 		let x = 2.0 * f32::consts::PI * (cutoff_hz / sample_hz as f32);
 		IIRHighpassFilter {

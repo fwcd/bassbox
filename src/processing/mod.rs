@@ -20,7 +20,7 @@ use crate::audioformat::{StandardFrame, empty_standard_frame};
 pub enum DspNode {
 	Empty,
 	Silence,
-	Source { src: Converter<Box<dyn Iterator<Item=StandardFrame> + Send>>, state: PauseState },
+	DynSource { src: Converter<Box<dyn Iterator<Item=StandardFrame> + Send>>, state: PauseState },
 	Volume(f32),
 	MovingAverage(Disableable<MovingAverageFilter>),
 	IIRLowpass(Disableable<IIRLowpassFilter>),
@@ -39,7 +39,7 @@ impl Node<StandardFrame> for DspNode {
 		match *self {
 			DspNode::Empty => (),
 			DspNode::Silence => silence(buffer),
-			DspNode::Source { ref mut src, ref state } => match state {
+			DspNode::DynSource { ref mut src, ref state } => match state {
 				PauseState::Playing => {
 					for i in 0..buffer.len() {
 						buffer[i] = src.next().unwrap_or_else(|| empty_standard_frame());

@@ -9,6 +9,7 @@ use graph::new_shared_graph;
 use engine::{AudioEngine, speaker::SpeakerEngine};
 use getopts::Options;
 use services::player::{AudioPlayerServiceRpc, AudioPlayerService};
+use services::graph::{AudioGraphServiceRpc, AudioGraphService};
 use std::env;
 use jsonrpc_core::IoHandler;
 use jsonrpc_stdio_server::ServerBuilder;
@@ -45,7 +46,8 @@ fn main() {
 
 	// Setup RPC services
 	let mut io = IoHandler::default();
-	io.extend_with(AudioPlayerService::constructing_graph(shared_graph, background_engine).to_delegate());
+	io.extend_with(AudioPlayerService::constructing_graph(shared_graph.clone(), background_engine).to_delegate());
+	io.extend_with(AudioGraphService::with_graph(shared_graph.clone()).to_delegate());
 	
 	ServerBuilder::new(io).build();
 }

@@ -98,7 +98,7 @@ impl AudioPlayerServiceRpc for AudioPlayerService {
 		let src_ref = graph.node_mut(self.src_node).expect("Audio graph has no source node");
 		
 		// TODO: Queueing?
-		*src_ref = DspNode::Source {
+		*src_ref = DspNode::DynSource {
 			src: Converter::from_hz_to_hz(Box::new(source), source_hz, self.engine.sample_hz),
 			state: PauseState::Playing
 		};
