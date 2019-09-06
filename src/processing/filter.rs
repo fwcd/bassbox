@@ -1,6 +1,6 @@
 //! A collection of lowpass and highpass filters
 
-use crate::audioformat::{StandardFrame, empty_standard_frame};
+use crate::audioformat::{StandardFrame, OpsExt, empty_standard_frame};
 use dsp::sample::Frame;
 use std::collections::VecDeque;
 
@@ -24,7 +24,9 @@ pub struct IIRLowpassFilter {
 
 impl Filter for IIRLowpassFilter {
 	fn apply(&mut self, input: StandardFrame) -> StandardFrame {
-		input // TODO: Implement this
+		let output = self.last_output.add((input.sub(self.last_input)).scale(self.alpha));
+		self.last_output = output;
+		output
 	}
 }
 
