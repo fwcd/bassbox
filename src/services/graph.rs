@@ -1,10 +1,10 @@
 use jsonrpc_core::Result as RpcResult;
+use jsonrpc_core::{Error as RpcError, ErrorCode as RpcErrorCode};
 use jsonrpc_derive::rpc;
 use serde::{Serialize, Deserialize};
-use dsp::Graph;
 use crate::audioformat::StandardFrame;
-use crate::processing::{DspNode, filter::{Disableable, CutoffFreq}};
-use crate::graph::SharedAudioGraph;
+use crate::processing::{DspNode, filter::{Disableable, CutoffFreq, IIRHighpassFilter, IIRLowpassFilter}};
+use crate::graph::{AudioGraph, SharedAudioGraph};
 
 #[derive(Serialize, Deserialize)]
 #[serde(tag = "type")]
@@ -13,8 +13,8 @@ pub enum RpcNode {
 	Silence,
 	DynSource,
 	Volume(f32),
-	IIRLowpass { cutoff_hz: f32 }, // TODO: Store cutoff_hz by value here
-	IIRHighpass { cutoff_hz: f32 }, // TODO: Store cutoff_hz by value here
+	IIRLowpass { cutoff_hz: f32, disabled: bool }, // TODO: Store cutoff_hz by value here
+	IIRHighpass { cutoff_hz: f32, disabled: bool }, // TODO: Store cutoff_hz by value here
 	DynFilter,
 	Other
 }
@@ -26,10 +26,30 @@ impl RpcNode {
 			DspNode::Silence => RpcNode::Silence,
 			DspNode::DynSource { .. } => RpcNode::DynSource,
 			DspNode::Volume(volume) => RpcNode::Volume(volume),
-			DspNode::IIRLowpass(Disableable { wrapped: ref filter, .. }) => RpcNode::IIRLowpass { cutoff_hz: filter.cutoff_hz() },
-			DspNode::IIRHighpass(Disableable { wrapped: ref filter, .. }) => RpcNode::IIRHighpass { cutoff_hz: filter.cutoff_hz() },
+			DspNode::IIRLowpass(Disableable { wrapped: ref filter, disabled }) => RpcNode::IIRLowpass { cutoff_hz: filter.cutoff_hz(), disabled: disabled },
+			DspNode::IIRHighpass(Disableable { wrapped: ref filter, disabled }) => RpcNode::IIRHighpass { cutoff_hz: filter.cutoff_hz(), disabled: disabled },
 			DspNode::DynFilter(..) => RpcNode::DynFilter,
 			_ => RpcNode::Other
+		}
+	}
+	
+	pub fn to_dsp_node(&self, sample_hz: f64) -> RpcResult<DspNode> {
+		match *self {
+			RpcNode::Empty => Ok(DspNode::Empty),
+			RpcNode::Silence => Ok(DspNode::Silence),
+			RpcNode::Volume(volume) => Ok(DspNode::Volume(volume)),
+			RpcNode::IIRLowpass { cutoff_hz, disabled } => Ok(DspNode::IIRLowpass(Disableable { wrapped: IIRLowpassFilter::from_cutoff_hz(cutoff_hz, sample_hz), disabled: disabled })),
+			RpcNode::IIRHighpass { cutoff_hz, disabled } => Ok(DspNode::IIRHighpass(Disableable { wrapped: IIRHighpassFilter::from_cutoff_hz(cutoff_hz, sample_hz), disabled: disabled })),
+			RpcNode::DynFilter | RpcNode::DynSource => Err(RpcError {
+				code: RpcErrorCode::InvalidParams,
+				message: "Dynamic DSP nodes can currently not be crated from RPC nodes".to_owned(),
+				data: None
+			}),
+			RpcNode::Other => Err(RpcError {
+				code: RpcErrorCode::InvalidParams,
+				message: "'Other' RPC node can not be converted to a DSP node".to_owned(),
+				data: None
+			})
 		}
 	}
 }
@@ -48,15 +68,15 @@ impl RpcEdge {
 
 #[derive(Serialize, Deserialize)]
 pub struct RpcGraph {
-	pub nodes: Vec<RpcNode>,
+	pub nodes: Vec<Option<RpcNode>>,
 	pub edges: Vec<RpcEdge>
 }
 
 impl RpcGraph {
-	pub fn from(graph: &Graph<StandardFrame, DspNode>) -> RpcGraph {
+	pub fn from(graph: &AudioGraph) -> RpcGraph {
 		RpcGraph {
-			nodes: graph.raw_nodes().iter().map(|node| RpcNode::from(&node.weight)).collect(),
-			edges: graph.raw_edges().iter().map(|edge| RpcEdge::between(edge.source().index(), edge.target().index())).collect()
+			nodes: graph.node_iter().map(|opt_node| opt_node.map(|node| RpcNode::from(node))).collect(),
+			edges: graph.edge_iter().map(|edge| RpcEdge::between(edge.src.index(), edge.dest.index())).collect()
 		}
 	}
 }
