@@ -24,6 +24,7 @@ pub struct IIRLowpassFilter {
 
 impl Filter for IIRLowpassFilter {
 	fn apply(&mut self, input: StandardFrame) -> StandardFrame {
+		// y[i] = y[i - 1] + alpha * (x[i] - x[i - 1])
 		let output = self.last_output.add((input.sub(self.last_input)).scale(self.alpha));
 		self.last_output = output;
 		output
@@ -42,7 +43,10 @@ pub struct IIRHighpassFilter {
 
 impl Filter for IIRHighpassFilter {
 	fn apply(&mut self, input: StandardFrame) -> StandardFrame {
-		input // TODO: Implement this
+		// y[i] = alpha * (y[i - 1] + x[i] - x[i - 1])
+		let output = self.last_output.add(input).sub(self.last_input).scale(self.alpha);
+		self.last_output = output;
+		output
 	}
 }
 
