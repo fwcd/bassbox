@@ -40,6 +40,7 @@ impl AudioGraph {
 	
 	/// Adds the given edge to the graph
 	pub fn add_edge(&mut self, src: NodeIndex, dest: NodeIndex) -> Result<EdgeIndex, WouldCycle> {
+		// TODO: Prevent duplicate edges?
 		self.inner.add_connection(src, dest)
 	}
 	
