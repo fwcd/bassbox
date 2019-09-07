@@ -92,7 +92,7 @@ impl AudioGraph {
 	/// Checks whether the node at the given index exists
 	fn node_exists(&self, node: NodeIndex) -> bool {
 		let i = node.index();
-		if i < 0 || i > self.free.len() {
+		if i > self.free.len() {
 			false
 		} else {
 			!self.free[i]

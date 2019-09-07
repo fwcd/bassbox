@@ -46,8 +46,8 @@ fn main() {
 
 	// Setup RPC services
 	let mut io = IoHandler::default();
-	io.extend_with(AudioPlayerService::constructing_graph(shared_graph.clone(), background_engine).to_delegate());
-	io.extend_with(AudioGraphService::using_graph(shared_graph.clone()).to_delegate());
+	io.extend_with(AudioPlayerService::constructing_graph(shared_graph.clone(), background_engine.clone()).to_delegate());
+	io.extend_with(AudioGraphService::using_graph(shared_graph.clone(), background_engine.clone()).to_delegate());
 	
 	ServerBuilder::new(io).build();
 }

@@ -2,9 +2,9 @@ use jsonrpc_core::Result as RpcResult;
 use jsonrpc_core::{Error as RpcError, ErrorCode as RpcErrorCode};
 use jsonrpc_derive::rpc;
 use serde::{Serialize, Deserialize};
-use crate::audioformat::StandardFrame;
 use crate::processing::{DspNode, filter::{Disableable, CutoffFreq, IIRHighpassFilter, IIRLowpassFilter}};
-use crate::graph::{AudioGraph, SharedAudioGraph};
+use crate::graph::{AudioGraph, SharedAudioGraph, NodeIndex, EdgeIndex};
+use crate::engine::BackgroundEngine;
 
 #[derive(Serialize, Deserialize)]
 #[serde(tag = "type")]
@@ -19,8 +19,8 @@ pub enum RpcNode {
 	Other
 }
 
-impl RpcNode {
-	pub fn from(node: &DspNode) -> RpcNode {
+impl From<&DspNode> for RpcNode {
+	fn from(node: &DspNode) -> RpcNode {
 		match *node {
 			DspNode::Empty => RpcNode::Empty,
 			DspNode::Silence => RpcNode::Silence,
@@ -32,9 +32,11 @@ impl RpcNode {
 			_ => RpcNode::Other
 		}
 	}
-	
-	pub fn to_dsp_node(&self, sample_hz: f64) -> RpcResult<DspNode> {
-		match *self {
+}
+
+impl RpcNode {
+	pub fn into_dsp_node(self, sample_hz: f64) -> RpcResult<DspNode> {
+		match self {
 			RpcNode::Empty => Ok(DspNode::Empty),
 			RpcNode::Silence => Ok(DspNode::Silence),
 			RpcNode::Volume(volume) => Ok(DspNode::Volume(volume)),
@@ -54,16 +56,42 @@ impl RpcNode {
 	}
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Copy, Clone)]
+pub struct RpcNodeIndex {
+	pub index: usize
+}
+
+impl From<NodeIndex> for RpcNodeIndex {
+	fn from(index: NodeIndex) -> RpcNodeIndex { RpcNodeIndex { index: index.index() } }
+}
+
+impl Into<NodeIndex> for RpcNodeIndex {
+	fn into(self) -> NodeIndex { NodeIndex::new(self.index) }
+}
+
+#[derive(Serialize, Deserialize, Copy, Clone)]
 pub struct RpcEdge {
-	pub src: usize,
-	pub dest: usize
+	pub src: RpcNodeIndex,
+	pub dest: RpcNodeIndex
 }
 
 impl RpcEdge {
-	pub fn between(src: usize, dest: usize) -> RpcEdge {
+	pub fn between(src: RpcNodeIndex, dest: RpcNodeIndex) -> RpcEdge {
 		RpcEdge { src: src, dest: dest }
 	}
+}
+
+#[derive(Serialize, Deserialize, Copy, Clone)]
+pub struct RpcEdgeIndex {
+	pub index: usize
+}
+
+impl From<EdgeIndex> for RpcEdgeIndex {
+	fn from(index: EdgeIndex) -> RpcEdgeIndex { RpcEdgeIndex { index: index.index() } }
+}
+
+impl Into<EdgeIndex> for RpcEdgeIndex {
+	fn into(self) -> EdgeIndex { EdgeIndex::new(self.index) }
 }
 
 #[derive(Serialize, Deserialize)]
@@ -76,7 +104,7 @@ impl RpcGraph {
 	pub fn from(graph: &AudioGraph) -> RpcGraph {
 		RpcGraph {
 			nodes: graph.node_iter().map(|opt_node| opt_node.map(|node| RpcNode::from(node))).collect(),
-			edges: graph.edge_iter().map(|edge| RpcEdge::between(edge.src.index(), edge.dest.index())).collect()
+			edges: graph.edge_iter().map(|edge| RpcEdge::between(RpcNodeIndex::from(edge.src), RpcNodeIndex::from(edge.dest))).collect()
 		}
 	}
 }
@@ -87,15 +115,30 @@ pub trait AudioGraphServiceRpc {
 	/// Fetches the current state of the graph
 	#[rpc(name = "audioGraph.get")]
 	fn get(&self) -> RpcResult<RpcGraph>;
+	
+	/// Adds a node to the graph, returning its index
+	#[rpc(name = "audioGraph.addNode")]
+	fn add_node(&self, node: RpcNode) -> RpcResult<RpcNodeIndex>;
+	
+	/// Removes a node from the graph
+	#[rpc(name = "audioGraph.removeNode")]
+	fn remove_node(&self, node: RpcNodeIndex) -> RpcResult<()>;
+	
+	/// Adds an edge to the graph
+	#[rpc(name = "audioGraph.addEdge")]
+	fn add_edge(&self, edge: RpcEdge) -> RpcResult<RpcEdgeIndex>;
+	
+	// TODO: removeEdge
 }
 
 pub struct AudioGraphService {
-	shared_graph: SharedAudioGraph
+	shared_graph: SharedAudioGraph,
+	engine: BackgroundEngine
 }
 
 impl AudioGraphService {
-	pub fn using_graph(shared_graph: SharedAudioGraph) -> AudioGraphService {
-		AudioGraphService { shared_graph: shared_graph }
+	pub fn using_graph(shared_graph: SharedAudioGraph, engine: BackgroundEngine) -> AudioGraphService {
+		AudioGraphService { shared_graph: shared_graph, engine: engine }
 	}
 }
 
@@ -103,5 +146,25 @@ impl AudioGraphServiceRpc for AudioGraphService {
 	fn get(&self) -> RpcResult<RpcGraph> {
 		let graph = self.shared_graph.lock().unwrap();
 		Ok(RpcGraph::from(&graph))
+	}
+	
+	fn add_node(&self, node: RpcNode) -> RpcResult<RpcNodeIndex> {
+		node.into_dsp_node(self.engine.sample_hz).map(|node| RpcNodeIndex::from(self.shared_graph.lock().unwrap().add_node(node)))
+	}
+	
+	fn remove_node(&self, node: RpcNodeIndex) -> RpcResult<()> {
+		self.shared_graph.lock().unwrap().remove_node(node.into());
+		Ok(())
+	}
+	
+	fn add_edge(&self, edge: RpcEdge) -> RpcResult<RpcEdgeIndex> {
+		match self.shared_graph.lock().unwrap().add_edge(edge.src.into(), edge.dest.into()) {
+			Ok(edge_index) => Ok(RpcEdgeIndex::from(edge_index)),
+			Err(..) => Err(RpcError {
+				code: RpcErrorCode::InvalidParams,
+				message: "This edge would create a cycle in the graph".to_owned(),
+				data: None
+			})
+		}
 	}
 }
