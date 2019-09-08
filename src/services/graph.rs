@@ -13,8 +13,8 @@ pub enum RpcNode {
 	Silence,
 	DynSource,
 	Volume(f32),
-	IIRLowpass { cutoff_hz: f32, disabled: bool }, // TODO: Store cutoff_hz by value here
-	IIRHighpass { cutoff_hz: f32, disabled: bool }, // TODO: Store cutoff_hz by value here
+	IIRLowpass { cutoff_hz: f32, disabled: bool },
+	IIRHighpass { cutoff_hz: f32, disabled: bool },
 	DynFilter,
 	Other
 }

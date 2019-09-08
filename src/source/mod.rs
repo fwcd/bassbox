@@ -1,6 +1,7 @@
 //! A collection of audio sources.
 
 pub mod mp3;
+pub mod file;
 
 use crate::audioformat::StandardFrame;
 
