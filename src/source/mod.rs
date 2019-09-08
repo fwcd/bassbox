@@ -3,6 +3,7 @@
 pub mod mp3;
 pub mod file;
 pub mod pausable;
+pub mod conv;
 
 use crate::audioformat::StandardFrame;
 
