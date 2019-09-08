@@ -110,7 +110,11 @@ pub trait AudioGraphServiceRpc {
 	
 	/// Removes a node from the graph
 	#[rpc(name = "audioGraph.removeNode")]
-	fn remove_node(&self, node: RpcNodeIndex) -> RpcResult<()>;
+	fn remove_node(&self, index: RpcNodeIndex) -> RpcResult<()>;
+	
+	/// Replaces a node from the graph
+	#[rpc(name = "audioGraph.replaceNode")]
+	fn replace_node(&self, index: RpcNodeIndex, node: RpcNode) -> RpcResult<()>;
 	
 	/// Adds an edge to the graph
 	#[rpc(name = "audioGraph.addEdge")]
@@ -140,9 +144,18 @@ impl AudioGraphServiceRpc for AudioGraphService {
 		node.into_dsp_node(self.engine.sample_hz).map(|node| self.shared_graph.lock().unwrap().add_node(node).index())
 	}
 	
-	fn remove_node(&self, node: RpcNodeIndex) -> RpcResult<()> {
-		self.shared_graph.lock().unwrap().remove_node(node.into());
+	fn remove_node(&self, index: RpcNodeIndex) -> RpcResult<()> {
+		self.shared_graph.lock().unwrap().remove_node(index.into());
 		Ok(())
+	}
+	
+	fn replace_node(&self, index: RpcNodeIndex, node: RpcNode) -> RpcResult<()> {
+		node.into_dsp_node(self.engine.sample_hz).and_then(|node| {
+			let mut graph = self.shared_graph.lock().unwrap();
+			let node_ref = graph.node_mut(index.into()).map_or_else(|| Err(server_error(format!("Node at {} does not exist", index))), Ok)?;
+			*node_ref = node;
+			Ok(())
+		})
 	}
 	
 	fn add_edge(&self, edge: RpcEdge) -> RpcResult<RpcEdgeIndex> {
