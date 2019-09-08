@@ -28,12 +28,6 @@ pub enum DspNode {
 	DynFilter(Box<dyn Filter + Send>)
 }
 
-/// A state of playback.
-pub enum PauseState {
-	Paused,
-	Playing
-}
-
 impl Node<StandardFrame> for DspNode {
 	fn audio_requested(&mut self, buffer: &mut [StandardFrame], _sample_hz: f64) {
 		match *self {

@@ -3,7 +3,6 @@ use crate::audioformat::{StandardFrame, empty_standard_frame, STANDARD_CHANNELS,
 use crate::graph::SharedAudioGraph;
 use std::sync::mpsc;
 use std::thread;
-use dsp::Node;
 use dsp::sample::{Sample, Frame, FromSample, conv::ToFrameSliceMut};
 use cpal::{StreamData, UnknownTypeOutputBuffer, OutputBuffer};
 use cpal::traits::{DeviceTrait, EventLoopTrait, HostTrait};
@@ -55,8 +54,8 @@ impl AudioEngine for SpeakerEngine {
 						ControlMsg::Pause => {
 							with_buffer_of!(data, write_silence);
 							paused = true
-						},
-						_ => println!("Control message not recognized by the speaker/CPAL engine: {:?}", msg)
+						}
+						// _ => println!("Control message not recognized by the speaker/CPAL engine: {:?}", msg)
 					}
 				}
 			

@@ -1,13 +1,10 @@
 use jsonrpc_core::Result as RpcResult;
 use jsonrpc_derive::rpc;
 use super::rpcutils::server_error;
-use std::fs::File;
-use std::io::BufReader;
 use dsp::NodeIndex;
-use dsp::sample::rate::Converter;
-use crate::source::{AudioSource, pausable::Pausable, conv::Converting, file::FileSource};
+use crate::source::{pausable::Pausable, conv::Converting, file::FileSource};
 use crate::graph::SharedAudioGraph;
-use crate::processing::{DspNode, PauseState, filter::{Disableable, IIRLowpassFilter, IIRHighpassFilter}};
+use crate::processing::{DspNode, filter::{Disableable, IIRLowpassFilter, IIRHighpassFilter}};
 use crate::engine::{BackgroundEngine, ControlMsg};
 
 /// The audio playing service methods exposed via JSON-RPC.
