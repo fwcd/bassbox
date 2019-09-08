@@ -17,6 +17,8 @@ impl<S> Converting<S> where S: AudioSource {
 			target_sample_hz: target_sample_hz
 		}
 	}
+	
+	pub fn wrapped(&self) -> &S { self.converter.source() }
 }
 
 impl<S> AudioSource for Converting<S> where S: AudioSource {

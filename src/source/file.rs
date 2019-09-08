@@ -53,10 +53,10 @@ pub struct FileSource {
 }
 
 impl FileSource {
-	pub fn new(file_path: String) -> Option<FileSource> {
+	pub fn new(file_path: &str) -> Option<FileSource> {
 		Some(FileSource {
-			decoder: DecoderSource::from(file_path.as_ref())?,
-			file_path: file_path
+			decoder: DecoderSource::from(file_path)?,
+			file_path: file_path.to_owned()
 		})
 	}
 	

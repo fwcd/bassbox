@@ -146,6 +146,8 @@ pub struct Disableable<F> {
 }
 
 impl<F> Disableable<F> {
+	pub fn new(wrapped: F, disabled: bool) -> Disableable<F> { Disableable { wrapped: wrapped, disabled: disabled } }
+
 	pub fn enabled(wrapped: F) -> Disableable<F> { Disableable { wrapped: wrapped, disabled: false } }
 
 	pub fn disabled(wrapped: F) -> Disableable<F> { Disableable { wrapped: wrapped, disabled: true } }

@@ -5,7 +5,7 @@ use std::fs::File;
 use std::io::BufReader;
 use dsp::NodeIndex;
 use dsp::sample::rate::Converter;
-use crate::source::{AudioSource, mp3::Mp3Source};
+use crate::source::{AudioSource, pausable::Pausable, conv::Converting, file::FileSource};
 use crate::graph::SharedAudioGraph;
 use crate::processing::{DspNode, PauseState, filter::{Disableable, IIRLowpassFilter, IIRHighpassFilter}};
 use crate::engine::{BackgroundEngine, ControlMsg};
@@ -89,19 +89,14 @@ impl AudioPlayerService {
 
 impl AudioPlayerServiceRpc for AudioPlayerService {
 	fn enqueue_file(&self, path: String) -> RpcResult<()> {
-		let file = File::open(&path)
-			.map_err(|e| server_error(format!("Could not find file at '{}': {}", &path, e)))?;
-		let source = Mp3Source::new(BufReader::new(file)); // TODO: Handle file type errors
-		let source_hz = source.sample_hz();
+		let source = FileSource::new(path.as_ref())
+			.map_or_else(|| Err(server_error(format!("Could not find or decode file at '{}'", &path))), Ok)?;
 
 		let mut graph = self.shared_graph.lock().unwrap();
 		let src_ref = graph.node_mut(self.src_node).expect("Audio graph has no source node");
 		
 		// TODO: Queueing?
-		*src_ref = DspNode::DynSource {
-			src: Converter::from_hz_to_hz(Box::new(source), source_hz, self.engine.sample_hz),
-			state: PauseState::Playing
-		};
+		*src_ref = DspNode::File(Pausable::playing(Converting::to_sample_hz(self.engine.sample_hz, source)));
 		
 		Ok(())
 	}

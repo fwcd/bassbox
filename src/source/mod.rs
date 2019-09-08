@@ -12,6 +12,7 @@ pub trait AudioSource: Iterator<Item=StandardFrame> {
 	fn sample_hz(&self) -> f64;
 }
 
+/// A silent source.
 pub struct EmptySource;
 
 impl AudioSource for EmptySource {
@@ -23,4 +24,3 @@ impl Iterator for EmptySource {
 
 	fn next(&mut self) -> Option<StandardFrame> { None }
 }
-

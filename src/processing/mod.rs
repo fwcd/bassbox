@@ -4,10 +4,9 @@
 pub mod filter;
 
 use dsp::Node;
-use dsp::sample::rate::Converter;
 use dsp::sample::Frame;
 use filter::{Filter, MovingAverageFilter, IIRLowpassFilter, IIRHighpassFilter, Disableable};
-use crate::source::{AudioSource, file::FileSource};
+use crate::source::{AudioSource, file::FileSource, conv::Converting, pausable::Pausable};
 use crate::audioformat::{StandardFrame, empty_standard_frame};
 
 /// An audio processing node which can either be a source
@@ -21,8 +20,8 @@ use crate::audioformat::{StandardFrame, empty_standard_frame};
 pub enum DspNode {
 	Empty,
 	Silence,
-	DynSource { src: Converter<Box<dyn Iterator<Item=StandardFrame> + Send>>, state: PauseState },
 	Volume(f32),
+	File(Pausable<Converting<FileSource>>),
 	MovingAverage(Disableable<MovingAverageFilter>),
 	IIRLowpass(Disableable<IIRLowpassFilter>),
 	IIRHighpass(Disableable<IIRHighpassFilter>),
@@ -40,21 +39,22 @@ impl Node<StandardFrame> for DspNode {
 		match *self {
 			DspNode::Empty => (),
 			DspNode::Silence => silence(buffer),
-			DspNode::DynSource { ref mut src, ref state } => match state {
-				PauseState::Playing => {
-					for i in 0..buffer.len() {
-						buffer[i] = src.next().unwrap_or_else(|| empty_standard_frame());
-					}
-				},
-				PauseState::Paused => silence(buffer)
-			},
 			DspNode::Volume(factor) => dsp::slice::map_in_place(buffer, |frame| frame.scale_amp(factor)),
-			// Static filter implementations to avoid boxing:
+			// Static source implementations to avoid boxing
+			DspNode::File(ref mut source) => read_source_into(buffer, source),
+			// Static filter implementations to avoid boxing
 			DspNode::MovingAverage(ref mut filter) => apply_filter(buffer, filter),
 			DspNode::IIRLowpass(ref mut filter) => apply_filter(buffer, filter),
 			DspNode::IIRHighpass(ref mut filter) => apply_filter(buffer, filter),
 			DspNode::DynFilter(ref mut filter) => apply_filter(buffer, filter)
 		}
+	}
+}
+
+fn read_source_into<S>(buffer: &mut [StandardFrame], source: &mut S) where S: AudioSource {
+	let empty = empty_standard_frame();
+	for i in 0..buffer.len() {
+		buffer[i] = source.next().unwrap_or(empty);
 	}
 }
 
