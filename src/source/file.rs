@@ -6,7 +6,7 @@ use super::AudioSource;
 
 /// An audio source whose format can automatically
 /// be determined from the file's path upon construction.
-pub enum DecoderSource {
+enum DecoderSource {
 	Mp3(Mp3Source<BufReader<File>>)
 	// TODO: Other formats
 }

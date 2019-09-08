@@ -2,6 +2,7 @@
 
 pub mod mp3;
 pub mod file;
+pub mod pausable;
 
 use crate::audioformat::StandardFrame;
 

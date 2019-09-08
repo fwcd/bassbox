@@ -7,6 +7,7 @@ use dsp::Node;
 use dsp::sample::rate::Converter;
 use dsp::sample::Frame;
 use filter::{Filter, MovingAverageFilter, IIRLowpassFilter, IIRHighpassFilter, Disableable};
+use crate::source::{AudioSource, file::FileSource};
 use crate::audioformat::{StandardFrame, empty_standard_frame};
 
 /// An audio processing node which can either be a source
