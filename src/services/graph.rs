@@ -14,9 +14,12 @@ pub enum RpcNode {
 	Empty,
 	Silence,
 	Volume(f32),
-	File { file_path: String, paused: bool },
-	IIRLowpass { cutoff_hz: f32, disabled: bool },
-	IIRHighpass { cutoff_hz: f32, disabled: bool },
+	#[serde(rename_all = "camelCase")]
+	File { file_path: String, #[serde(default)] paused: bool },
+	#[serde(rename_all = "camelCase")]
+	IIRLowpass { #[serde(default)] cutoff_hz: f32, #[serde(default)] disabled: bool },
+	#[serde(rename_all = "camelCase")]
+	IIRHighpass { #[serde(default)] cutoff_hz: f32, #[serde(default)] disabled: bool },
 	DynFilter,
 	Other
 }
@@ -107,6 +110,8 @@ pub trait AudioGraphServiceRpc {
 	/// Adds a node to the graph, returning its index
 	#[rpc(name = "audioGraph.addNode")]
 	fn add_node(&self, node: RpcNode) -> RpcResult<RpcNodeIndex>;
+	
+	/// Creates a new template 
 	
 	/// Removes a node from the graph
 	#[rpc(name = "audioGraph.removeNode")]
