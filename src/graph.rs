@@ -78,14 +78,10 @@ impl AudioGraph {
 	
 	/// Removes a node from the graph in O(1).
 	/// 
-	/// Note that this will not actually remove the node
-	/// from the underlying data structure, but rather
-	/// mark the node index as free to be overwritten
-	/// by a new node.
-	/// 
 	/// Any indices referring to the given node should
 	/// be dropped by now.
 	pub fn remove_node(&mut self, node: NodeIndex) {
+		*self.node_mut(node).expect("Tried to remove non-existing node") = DspNode::Empty;
 		self.free[node.index()] = true;
 		self.has_free = true;
 	}
