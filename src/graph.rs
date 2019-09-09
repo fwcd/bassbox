@@ -76,13 +76,14 @@ impl AudioGraph {
 		}
 	}
 	
-	/// Removes a node from the graph in O(1).
+	/// Removes a node from the graph.
 	/// 
 	/// Any indices referring to the given node should
 	/// be dropped by now.
 	pub fn remove_node(&mut self, node: NodeIndex) {
-		*self.node_mut(node).expect("Tried to remove non-existing node") = DspNode::Empty;
 		self.free[node.index()] = true;
+		self.inner.remove_all_input_connections(node);
+		self.inner.remove_all_output_connections(node);
 		self.has_free = true;
 	}
 	
