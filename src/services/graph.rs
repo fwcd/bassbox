@@ -11,17 +11,36 @@ use crate::engine::BackgroundEngine;
 #[derive(Serialize, Deserialize)]
 #[serde(tag = "type")]
 pub enum RpcNode {
+	/// An empty/passthrough node
 	Empty,
+	/// An actively silencing node
 	Silence,
+	/// A volume-controllable node
 	#[serde(rename_all = "camelCase")]
-	Volume { #[serde(default)] level: f32 },
+	Volume {
+		#[serde(default)] level: f32
+	},
+	/// A file source
 	#[serde(rename_all = "camelCase")]
-	File { file_path: String, #[serde(default)] paused: bool },
+	File {
+		file_path: String,
+		#[serde(default)] paused: bool
+	},
+	/// A lowpass filter
 	#[serde(rename_all = "camelCase")]
-	IIRLowpass { #[serde(default)] cutoff_hz: f32, #[serde(default)] disabled: bool },
+	IIRLowpass {
+		#[serde(default)] cutoff_hz: f32,
+		#[serde(default)] disabled: bool
+	},
+	/// A highpass filter
 	#[serde(rename_all = "camelCase")]
-	IIRHighpass { #[serde(default)] cutoff_hz: f32, #[serde(default)] disabled: bool },
+	IIRHighpass {
+		#[serde(default)] cutoff_hz: f32,
+		#[serde(default)] disabled: bool
+	},
+	/// A dynamically dispatched filter (note that setting these is currently not supported)
 	DynFilter,
+	/// Any other node that currently has no RPC-serializable equivalent
 	Other
 }
 
