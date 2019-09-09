@@ -13,7 +13,8 @@ use crate::engine::BackgroundEngine;
 pub enum RpcNode {
 	Empty,
 	Silence,
-	Volume(f32),
+	#[serde(rename_all = "camelCase")]
+	Volume { #[serde(default)] level: f32 },
 	#[serde(rename_all = "camelCase")]
 	File { file_path: String, #[serde(default)] paused: bool },
 	#[serde(rename_all = "camelCase")]
@@ -30,7 +31,7 @@ impl From<&DspNode> for RpcNode {
 			DspNode::Empty => RpcNode::Empty,
 			DspNode::Silence => RpcNode::Silence,
 			DspNode::File(Pausable { wrapped: ref converting_source, paused }) => RpcNode::File { file_path: converting_source.wrapped().file_path().to_owned(), paused: paused },
-			DspNode::Volume(volume) => RpcNode::Volume(volume),
+			DspNode::Volume(volume) => RpcNode::Volume { level: volume },
 			DspNode::IIRLowpass(Disableable { wrapped: ref filter, disabled }) => RpcNode::IIRLowpass { cutoff_hz: filter.cutoff_hz(), disabled: disabled },
 			DspNode::IIRHighpass(Disableable { wrapped: ref filter, disabled }) => RpcNode::IIRHighpass { cutoff_hz: filter.cutoff_hz(), disabled: disabled },
 			DspNode::DynFilter(..) => RpcNode::DynFilter,
@@ -44,7 +45,7 @@ impl RpcNode {
 		match self {
 			RpcNode::Empty => Ok(DspNode::Empty),
 			RpcNode::Silence => Ok(DspNode::Silence),
-			RpcNode::Volume(volume) => Ok(DspNode::Volume(volume)),
+			RpcNode::Volume { level } => Ok(DspNode::Volume(level)),
 			RpcNode::File { ref file_path, paused } => Ok(DspNode::File(
 				Pausable::new(
 					Converting::to_sample_hz(
