@@ -108,14 +108,16 @@ impl RpcEdge {
 #[derive(Serialize, Deserialize)]
 pub struct RpcGraph {
 	pub nodes: Vec<Option<RpcNode>>,
-	pub edges: Vec<RpcEdge>
+	pub edges: Vec<RpcEdge>,
+	pub master: Option<RpcNodeIndex>
 }
 
 impl RpcGraph {
 	pub fn from(graph: &AudioGraph) -> RpcGraph {
 		RpcGraph {
 			nodes: graph.node_iter().map(|opt_node| opt_node.map(|node| RpcNode::from(node))).collect(),
-			edges: graph.edge_iter().map(|edge| RpcEdge::between(edge.src.index(), edge.dest.index())).collect()
+			edges: graph.edge_iter().map(|edge| RpcEdge::between(edge.src.index(), edge.dest.index())).collect(),
+			master: graph.master().map(|i| i.index())
 		}
 	}
 }

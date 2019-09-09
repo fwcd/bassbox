@@ -136,6 +136,11 @@ impl AudioGraph {
 		self.inner.set_master(master);
 	}
 	
+	/// Fetches the master (output) node of this graph
+	pub fn master(&self) -> Option<NodeIndex> {
+		self.inner.master_index()
+	}
+	
 	/// Requests audio from the master node
 	#[inline]
 	pub fn audio_requested(&mut self, output: &mut [StandardFrame], sample_hz: f64) {
