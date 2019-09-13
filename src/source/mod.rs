@@ -2,6 +2,7 @@
 
 pub mod mp3;
 pub mod file;
+pub mod command;
 pub mod pausable;
 pub mod conv;
 

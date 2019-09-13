@@ -6,7 +6,7 @@ pub mod filter;
 use dsp::Node;
 use dsp::sample::Frame;
 use filter::{Filter, MovingAverageFilter, IIRLowpassFilter, IIRHighpassFilter, Disableable};
-use crate::source::{AudioSource, file::FileSource, conv::Converting, pausable::Pausable};
+use crate::source::{AudioSource, file::FileSource, command::CommandSource, conv::Converting, pausable::Pausable};
 use crate::audioformat::{StandardFrame, empty_standard_frame};
 
 /// An audio processing node which can either be a source
@@ -15,13 +15,13 @@ use crate::audioformat::{StandardFrame, empty_standard_frame};
 /// 
 /// _Generally_ all intermediate operations that perform modifications
 /// on the audio source (like pausing playback) should either
-/// be implemented as a parameter of `DspNode::DynSource` or in an
-/// `AudioSource` implementation wrapping another `AudioSource`.
+/// be implemented as an `AudioSource` decorator.
 pub enum DspNode {
 	Empty,
 	Silence,
 	Volume(f32),
 	File(Pausable<Converting<FileSource>>),
+	Command(Pausable<Converting<CommandSource>>),
 	MovingAverage(Disableable<MovingAverageFilter>),
 	IIRLowpass(Disableable<IIRLowpassFilter>),
 	IIRHighpass(Disableable<IIRHighpassFilter>),
@@ -36,6 +36,7 @@ impl Node<StandardFrame> for DspNode {
 			DspNode::Volume(factor) => dsp::slice::map_in_place(buffer, |frame| frame.scale_amp(factor)),
 			// Static source implementations to avoid boxing
 			DspNode::File(ref mut source) => read_source_into(buffer, source),
+			DspNode::Command(ref mut source) => read_source_into(buffer, source),
 			// Static filter implementations to avoid boxing
 			DspNode::MovingAverage(ref mut filter) => apply_filter(buffer, filter),
 			DspNode::IIRLowpass(ref mut filter) => apply_filter(buffer, filter),

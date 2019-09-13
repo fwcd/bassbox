@@ -5,7 +5,7 @@ use serde::{Serialize, Deserialize};
 use super::rpcutils::server_error;
 use crate::processing::{DspNode, filter::{Disableable, CutoffFreq, IIRHighpassFilter, IIRLowpassFilter}};
 use crate::graph::{AudioGraph, SharedAudioGraph};
-use crate::source::{pausable::Pausable, conv::Converting, file::FileSource};
+use crate::source::{AudioSource, pausable::Pausable, conv::Converting, file::FileSource, command::CommandSource};
 use crate::engine::BackgroundEngine;
 
 #[derive(Serialize, Deserialize)]
@@ -25,6 +25,14 @@ pub enum RpcNode {
 	File {
 		file_path: String,
 		#[serde(default)] paused: bool
+	},
+	/// A command source
+	#[serde(rename_all = "camelCase")]
+	Command {
+		command: String,
+		#[serde(default)] args: Vec<String>,
+		sample_hz: f64,
+		paused: bool
 	},
 	/// A lowpass filter
 	#[serde(rename_all = "camelCase")]
@@ -49,7 +57,16 @@ impl From<&DspNode> for RpcNode {
 		match *node {
 			DspNode::Empty => RpcNode::Empty,
 			DspNode::Silence => RpcNode::Silence,
-			DspNode::File(Pausable { wrapped: ref converting_source, paused }) => RpcNode::File { file_path: converting_source.wrapped().file_path().to_owned(), paused: paused },
+			DspNode::File(Pausable { wrapped: ref converting_source, paused }) => RpcNode::File {
+				file_path: converting_source.wrapped().file_path().to_owned(),
+				paused: paused
+			},
+			DspNode::Command(Pausable { wrapped: ref converting_source, paused }) => RpcNode::Command {
+				command: converting_source.wrapped().command().to_owned(),
+				args: converting_source.wrapped().args().iter().map(|s| s.to_owned()).collect(),
+				sample_hz: converting_source.wrapped().sample_hz(),
+				paused: paused
+			},
 			DspNode::Volume(volume) => RpcNode::Volume { level: volume },
 			DspNode::IIRLowpass(Disableable { wrapped: ref filter, disabled }) => RpcNode::IIRLowpass { cutoff_hz: filter.cutoff_hz(), disabled: disabled },
 			DspNode::IIRHighpass(Disableable { wrapped: ref filter, disabled }) => RpcNode::IIRHighpass { cutoff_hz: filter.cutoff_hz(), disabled: disabled },
@@ -60,7 +77,7 @@ impl From<&DspNode> for RpcNode {
 }
 
 impl RpcNode {
-	pub fn into_dsp_node(self, sample_hz: f64) -> RpcResult<DspNode> {
+	pub fn into_dsp_node(self, target_sample_hz: f64) -> RpcResult<DspNode> {
 		match self {
 			RpcNode::Empty => Ok(DspNode::Empty),
 			RpcNode::Silence => Ok(DspNode::Silence),
@@ -68,14 +85,23 @@ impl RpcNode {
 			RpcNode::File { ref file_path, paused } => Ok(DspNode::File(
 				Pausable::new(
 					Converting::to_sample_hz(
-						sample_hz,
+						target_sample_hz,
 						FileSource::new(file_path.as_ref()).map_or_else(|| Err(server_error("Could not create file source")), Ok)?
 					),
 					paused
 				)
 			)),
-			RpcNode::IIRLowpass { cutoff_hz, disabled } => Ok(DspNode::IIRLowpass(Disableable::new(IIRLowpassFilter::from_cutoff_hz(cutoff_hz, sample_hz), disabled))),
-			RpcNode::IIRHighpass { cutoff_hz, disabled } => Ok(DspNode::IIRHighpass(Disableable::new(IIRHighpassFilter::from_cutoff_hz(cutoff_hz, sample_hz), disabled))),
+			RpcNode::Command { ref command, ref args, sample_hz, paused } => Ok(DspNode::Command(
+				Pausable::new(
+					Converting::to_sample_hz(
+						target_sample_hz,
+						CommandSource::new(command, &args.iter().map(|s| s.as_ref()).collect::<Vec<_>>(), sample_hz).map_err(|e| server_error(e))?
+					),
+					paused
+				)
+			)),
+			RpcNode::IIRLowpass { cutoff_hz, disabled } => Ok(DspNode::IIRLowpass(Disableable::new(IIRLowpassFilter::from_cutoff_hz(cutoff_hz, target_sample_hz), disabled))),
+			RpcNode::IIRHighpass { cutoff_hz, disabled } => Ok(DspNode::IIRHighpass(Disableable::new(IIRHighpassFilter::from_cutoff_hz(cutoff_hz, target_sample_hz), disabled))),
 			RpcNode::DynFilter => Err(RpcError {
 				code: RpcErrorCode::InvalidParams,
 				message: "Dynamic DSP nodes can currently not be crated from RPC nodes".to_owned(),
