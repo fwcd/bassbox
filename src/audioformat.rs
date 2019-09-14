@@ -7,9 +7,6 @@ pub type StandardSample = f32;
 pub const STANDARD_CHANNELS: usize = 2;
 pub type StandardFrame = [StandardSample; STANDARD_CHANNELS];
 
-// TODO: Deprecate and replace by Frame::equilibrium directly
-pub fn empty_standard_frame() -> StandardFrame { StandardFrame::equilibrium() }
-
 /// Basic arithmetic operating on the signal's amplitude
 /// for standard frames. More flexible than add_amp and scale_amp
 /// since it provides subtraction and division operations too.

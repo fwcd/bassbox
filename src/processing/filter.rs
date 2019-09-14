@@ -1,6 +1,6 @@
 //! A collection of lowpass and highpass filters
 
-use crate::audioformat::{StandardFrame, OpsExt, empty_standard_frame};
+use crate::audioformat::{StandardFrame, OpsExt};
 use dsp::sample::Frame;
 use std::collections::VecDeque;
 use std::f32;
@@ -35,7 +35,7 @@ pub struct IIRLowpassFilter {
 
 impl IIRLowpassFilter {
 	pub fn from_cutoff_hz(cutoff_hz: f32, sample_hz: f64) -> IIRLowpassFilter {
-		IIRLowpassFilter::new(empty_standard_frame(), cutoff_hz, sample_hz)
+		IIRLowpassFilter::new(StandardFrame::equilibrium(), cutoff_hz, sample_hz)
 	}
 
 	pub fn new(last_output: StandardFrame, cutoff_hz: f32, sample_hz: f64) -> IIRLowpassFilter {
@@ -82,7 +82,7 @@ pub struct IIRHighpassFilter {
 
 impl IIRHighpassFilter {
 	pub fn from_cutoff_hz(cutoff_hz: f32, sample_hz: f64) -> IIRHighpassFilter {
-		IIRHighpassFilter::new(empty_standard_frame(), empty_standard_frame(), cutoff_hz, sample_hz)
+		IIRHighpassFilter::new(StandardFrame::equilibrium(), StandardFrame::equilibrium(), cutoff_hz, sample_hz)
 	}
 
 	pub fn new(last_input: StandardFrame, last_output: StandardFrame, cutoff_hz: f32, sample_hz: f64) -> IIRHighpassFilter {
@@ -141,7 +141,7 @@ impl Filter for MovingAverageFilter {
 			self.last.pop_front();
 		}
 		self.last.push_back(input);
-		let output = self.last.iter().fold(empty_standard_frame(), |a, b| a.add_amp(*b));
+		let output = self.last.iter().fold(StandardFrame::equilibrium(), |a, b| a.add_amp(*b));
 		return output.scale_amp(1.0 / (self.length as f32));
 	}
 }
