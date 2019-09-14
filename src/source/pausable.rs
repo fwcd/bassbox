@@ -1,3 +1,4 @@
+use dsp::{Signal, Frame};
 use crate::audioformat::StandardFrame;
 use super::AudioSource;
 
@@ -23,14 +24,16 @@ impl<S> AudioSource for Pausable<S> where S: AudioSource {
 	fn sample_hz(&self) -> f64 { self.wrapped.sample_hz() }
 }
 
-impl<S> Iterator for Pausable<S> where S: AudioSource {
-	type Item = StandardFrame;
+impl<S> Signal for Pausable<S> where S: Signal {
+	type Frame = S::Frame;
 	
-	fn next(&mut self) -> Option<StandardFrame> {
+	fn next(&mut self) -> S::Frame {
 		if self.paused {
-			None
+			S::Frame::equilibrium()
 		} else {
 			self.wrapped.next()
 		}
 	}
+	
+	fn is_exhausted(&self) -> bool { self.wrapped.is_exhausted() }
 }

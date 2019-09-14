@@ -1,9 +1,9 @@
 use super::{AudioEngine, BackgroundEngine, ControlMsg, EngineControls};
-use crate::audioformat::{StandardFrame, empty_standard_frame, STANDARD_CHANNELS, StandardSample};
+use crate::audioformat::{StandardFrame, STANDARD_CHANNELS, StandardSample};
 use crate::graph::SharedAudioGraph;
 use std::sync::mpsc;
 use std::thread;
-use dsp::sample::{Sample, Frame, FromSample, conv::ToFrameSliceMut};
+use dsp::{Sample, Frame, FromSample, Node, sample::conv::ToFrameSliceMut};
 use cpal::{StreamData, UnknownTypeOutputBuffer, OutputBuffer};
 use cpal::traits::{DeviceTrait, EventLoopTrait, HostTrait};
 
@@ -70,7 +70,7 @@ impl AudioEngine for SpeakerEngine {
 						// Read audio from graph into temporary buffer
 						let sample_count = buffer_sample_count(&data).unwrap_or(0);
 						let frame_count = sample_count / STANDARD_CHANNELS;
-						let mut audio: Vec<StandardFrame> = vec![empty_standard_frame(); frame_count];
+						let mut audio: Vec<StandardFrame> = vec![StandardFrame::equilibrium(); frame_count];
 						shared_graph.lock().unwrap().audio_requested(&mut audio, sample_hz);
 					
 						with_buffer_of!(data, |buffer| write_audio(&audio, buffer));

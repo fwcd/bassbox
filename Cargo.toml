@@ -7,10 +7,10 @@ edition = "2018"
 [dependencies]
 # General
 getopts = "0.2"
-either = "1.5.3"
 byteorder = "1.3.2"
 # Audio
-dsp-chain = "0.13.1"
+# TODO: Update to official version once merged
+dsp-chain = { git = "https://github.com/fwcd/dsp-chain", rev = "55ecc85" }
 cpal = "0.10.0"
 minimp3 = "0.3.3"
 # RPC

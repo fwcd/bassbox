@@ -7,7 +7,7 @@ use dsp::Node;
 use dsp::sample::Frame;
 use filter::{Filter, MovingAverageFilter, IIRLowpassFilter, IIRHighpassFilter, Disableable};
 use crate::source::{AudioSource, file::FileSource, command::CommandSource, conv::Converting, pausable::Pausable};
-use crate::audioformat::{StandardFrame, empty_standard_frame};
+use crate::audioformat::StandardFrame;
 
 /// An audio processing node which can either be a source
 /// or an intermediate node that performs some transformation
@@ -25,7 +25,7 @@ pub enum DspNode {
 	MovingAverage(Disableable<MovingAverageFilter>),
 	IIRLowpass(Disableable<IIRLowpassFilter>),
 	IIRHighpass(Disableable<IIRHighpassFilter>),
-	DynFilter(Box<dyn Filter + Send>)
+	DynFilter(Box<dyn Filter<Frame=StandardFrame> + Send>)
 }
 
 impl Node<StandardFrame> for DspNode {
@@ -35,8 +35,8 @@ impl Node<StandardFrame> for DspNode {
 			DspNode::Silence => silence(buffer),
 			DspNode::Volume(factor) => dsp::slice::map_in_place(buffer, |frame| frame.scale_amp(factor)),
 			// Static source implementations to avoid boxing
-			DspNode::File(ref mut source) => read_source_into(buffer, source),
-			DspNode::Command(ref mut source) => read_source_into(buffer, source),
+			DspNode::File(ref mut source) => read_signal_into(buffer, source),
+			DspNode::Command(ref mut source) => read_signal_into(buffer, source),
 			// Static filter implementations to avoid boxing
 			DspNode::MovingAverage(ref mut filter) => apply_filter(buffer, filter),
 			DspNode::IIRLowpass(ref mut filter) => apply_filter(buffer, filter),
@@ -46,22 +46,21 @@ impl Node<StandardFrame> for DspNode {
 	}
 }
 
-fn read_source_into<S>(buffer: &mut [StandardFrame], source: &mut S) where S: AudioSource {
-	let empty = empty_standard_frame();
+fn read_signal_into<S, F>(buffer: &mut [F], source: &mut S) where S: AudioSource<Frame=F>, F: Frame {
 	for i in 0..buffer.len() {
-		buffer[i] = source.next().unwrap_or(empty);
+		buffer[i] = source.next();
 	}
 }
 
-fn apply_filter<F>(buffer: &mut [StandardFrame], filter: &mut F) where F: Filter {
+fn apply_filter<L, F>(buffer: &mut [F], filter: &mut L) where L: Filter<Frame=F>, F: Frame {
 	for frame in buffer {
 		*frame = filter.apply(*frame);
 	}
 }
 
 /// Silences the buffer.
-fn silence(buffer: &mut [StandardFrame]) {
+fn silence<F>(buffer: &mut [F]) where F: Frame {
 	for i in 0..buffer.len() {
-		buffer[i] = empty_standard_frame();
+		buffer[i] = F::equilibrium();
 	}
 }

@@ -1,46 +1,53 @@
 use std::io::BufReader;
 use std::fs::File;
+use dsp::Signal;
 use crate::audioformat::StandardFrame;
 use super::mp3::Mp3Source;
 use super::AudioSource;
 
 /// An audio source whose format can automatically
 /// be determined from the file's path upon construction.
-enum DecoderSource {
+enum FileFormatSource {
 	Mp3(Mp3Source<BufReader<File>>)
 	// TODO: Other formats
 }
 
-impl DecoderSource {
+impl FileFormatSource {
 	/// Tries to recognize the file's format and
 	/// create an appropriate decoder source for it.
 	/// Otherwise returns None.
-	fn from(file_path: &str) -> Option<DecoderSource> {
+	fn from(file_path: &str) -> Option<FileFormatSource> {
 		let splittable_path = file_path.clone();
 		let splitter = splittable_path.split(".");
 		let reader = BufReader::new(File::open(file_path).ok()?);
 		match splitter.last()?.as_ref() {
-			"mp3" => Some(DecoderSource::Mp3(Mp3Source::new(reader))),
+			"mp3" => Some(FileFormatSource::Mp3(Mp3Source::new(reader))),
 			// TODO: Other formats
 			_ => None
 		}
 	}
 }
 
-impl AudioSource for DecoderSource {
+impl AudioSource for FileFormatSource {
 	fn sample_hz(&self) -> f64 {
 		match *self {
-			DecoderSource::Mp3(ref src) => src.sample_hz()
+			FileFormatSource::Mp3(ref src) => src.sample_hz()
 		}
 	}
 }
 
-impl Iterator for DecoderSource {
-	type Item = StandardFrame;
+impl Signal for FileFormatSource {
+	type Frame = StandardFrame;
 	
-	fn next(&mut self) -> Option<StandardFrame> {
+	fn next(&mut self) -> StandardFrame {
 		match *self {
-			DecoderSource::Mp3(ref mut src) => src.next()
+			FileFormatSource::Mp3(ref mut src) => src.next()
+		}
+	}
+	
+	fn is_exhausted(&self) -> bool {
+		match *self {
+			FileFormatSource::Mp3(ref src) => src.is_exhausted()
 		}
 	}
 }
@@ -48,14 +55,14 @@ impl Iterator for DecoderSource {
 /// A wrapper around a decoder source that maintains
 /// a path to the file it was created from.
 pub struct FileSource {
-	decoder: DecoderSource,
+	wrapped: FileFormatSource,
 	file_path: String
 }
 
 impl FileSource {
 	pub fn new(file_path: &str) -> Option<FileSource> {
 		Some(FileSource {
-			decoder: DecoderSource::from(file_path)?,
+			wrapped: FileFormatSource::from(file_path)?,
 			file_path: file_path.to_owned()
 		})
 	}
@@ -64,11 +71,13 @@ impl FileSource {
 }
 
 impl AudioSource for FileSource {
-	fn sample_hz(&self) -> f64 { self.decoder.sample_hz() }
+	fn sample_hz(&self) -> f64 { self.wrapped.sample_hz() }
 }
 
-impl Iterator for FileSource {
-	type Item = StandardFrame;
+impl Signal for FileSource {
+	type Frame = StandardFrame;
 	
-	fn next(&mut self) -> Option<StandardFrame> { self.decoder.next() }
+	fn next(&mut self) -> StandardFrame { self.wrapped.next() }
+	
+	fn is_exhausted(&self) -> bool { self.wrapped.is_exhausted() }
 }

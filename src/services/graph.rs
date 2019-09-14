@@ -2,6 +2,8 @@ use jsonrpc_core::Result as RpcResult;
 use jsonrpc_core::{Error as RpcError, ErrorCode as RpcErrorCode};
 use jsonrpc_derive::rpc;
 use serde::{Serialize, Deserialize};
+use std::collections::HashMap;
+use dsp::EdgeRef;
 use super::rpcutils::server_error;
 use crate::processing::{DspNode, filter::{Disableable, CutoffFreq, IIRHighpassFilter, IIRLowpassFilter}};
 use crate::graph::{AudioGraph, SharedAudioGraph};
@@ -133,7 +135,7 @@ impl RpcEdge {
 
 #[derive(Serialize, Deserialize)]
 pub struct RpcGraph {
-	pub nodes: Vec<Option<RpcNode>>,
+	pub nodes: HashMap<RpcNodeIndex, RpcNode>,
 	pub edges: Vec<RpcEdge>,
 	pub master: Option<RpcNodeIndex>
 }
@@ -141,9 +143,9 @@ pub struct RpcGraph {
 impl RpcGraph {
 	pub fn from(graph: &AudioGraph) -> RpcGraph {
 		RpcGraph {
-			nodes: graph.node_iter().map(|opt_node| opt_node.map(|node| RpcNode::from(node))).collect(),
-			edges: graph.edge_iter().map(|edge| RpcEdge::between(edge.src.index(), edge.dest.index())).collect(),
-			master: graph.master().map(|i| i.index())
+			nodes: graph.node_references().map(|(id, node)| (id.index(), RpcNode::from(node))).collect(),
+			edges: graph.edge_references().map(|edge| RpcEdge::between(edge.source().index(), edge.target().index())).collect(),
+			master: graph.master_index().map(|i| i.index())
 		}
 	}
 }
@@ -212,7 +214,7 @@ impl AudioGraphServiceRpc for AudioGraphService {
 	}
 	
 	fn add_edge(&self, edge: RpcEdge) -> RpcResult<RpcEdgeIndex> {
-		match self.shared_graph.lock().unwrap().add_edge(edge.src.into(), edge.dest.into()) {
+		match self.shared_graph.lock().unwrap().add_connection(edge.src.into(), edge.dest.into()) {
 			Ok(edge_index) => Ok(edge_index.index()),
 			Err(..) => Err(RpcError {
 				code: RpcErrorCode::InvalidParams,

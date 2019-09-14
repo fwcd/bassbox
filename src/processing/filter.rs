@@ -8,8 +8,10 @@ use std::f32;
 /// A facility that processes audio on a frame-by-frame
 /// basis, possibly maintaining state across calls.
 pub trait Filter {
+	type Frame: Frame;
+
 	/// Applies the filter to a single frame.
-	fn apply(&mut self, input: StandardFrame) -> StandardFrame;
+	fn apply(&mut self, input: Self::Frame) -> Self::Frame;
 }
 
 /// Anything that has a cutoff frequency
@@ -56,6 +58,8 @@ impl CutoffFreq for IIRLowpassFilter {
 }
 
 impl Filter for IIRLowpassFilter {
+	type Frame = StandardFrame;
+
 	fn apply(&mut self, input: StandardFrame) -> StandardFrame {
 		// y[i] = y[i - 1] + alpha * (x[i] - y[i - 1])
 		let output = self.last_output.add((input.sub(self.last_output)).scale(self.alpha));
@@ -102,6 +106,8 @@ impl CutoffFreq for IIRHighpassFilter {
 }
 
 impl Filter for IIRHighpassFilter {
+	type Frame = StandardFrame;
+
 	fn apply(&mut self, input: StandardFrame) -> StandardFrame {
 		// y[i] = alpha * (y[i - 1] + x[i] - x[i - 1])
 		let output = self.last_output.add(input).sub(self.last_input).scale(self.alpha);
@@ -128,6 +134,8 @@ impl MovingAverageFilter {
 }
 
 impl Filter for MovingAverageFilter {
+	type Frame = StandardFrame;
+
 	fn apply(&mut self, input: StandardFrame) -> StandardFrame {
 		if self.last.len() == self.length {
 			self.last.pop_front();
@@ -140,30 +148,34 @@ impl Filter for MovingAverageFilter {
 
 /// A disableable filter that lets the original signal
 /// "pass-through" if disabled.
-pub struct Disableable<F> {
-	pub wrapped: F,
+pub struct Disableable<L> {
+	pub wrapped: L,
 	pub disabled: bool
 }
 
-impl<F> Disableable<F> {
-	pub fn new(wrapped: F, disabled: bool) -> Disableable<F> { Disableable { wrapped: wrapped, disabled: disabled } }
+impl<L> Disableable<L> {
+	pub fn new(wrapped: L, disabled: bool) -> Disableable<L> { Disableable { wrapped: wrapped, disabled: disabled } }
 
-	pub fn enabled(wrapped: F) -> Disableable<F> { Disableable { wrapped: wrapped, disabled: false } }
+	pub fn enabled(wrapped: L) -> Disableable<L> { Disableable { wrapped: wrapped, disabled: false } }
 
-	pub fn disabled(wrapped: F) -> Disableable<F> { Disableable { wrapped: wrapped, disabled: true } }
+	pub fn disabled(wrapped: L) -> Disableable<L> { Disableable { wrapped: wrapped, disabled: true } }
 	
 	pub fn with<E>(&self, wrapped: E) -> Disableable<E> { Disableable { wrapped: wrapped, disabled: self.disabled } }
 }
 
-impl<F> Filter for Disableable<F> where F: Filter {
-	fn apply(&mut self, input: StandardFrame) -> StandardFrame {
+impl<L> Filter for Disableable<L> where L: Filter {
+	type Frame = L::Frame;
+
+	fn apply(&mut self, input: L::Frame) -> L::Frame {
 		let output = self.wrapped.apply(input);
 		if self.disabled { input } else { output }
 	}
 }
 
-impl<F> Filter for Box<F> where F: Filter + ?Sized {
-	fn apply(&mut self, input: StandardFrame) -> StandardFrame {
+impl<L> Filter for Box<L> where L: Filter + ?Sized {
+	type Frame = L::Frame;
+
+	fn apply(&mut self, input: L::Frame) -> L::Frame {
 		(**self).apply(input)
 	}
 }

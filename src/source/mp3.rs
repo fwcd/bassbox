@@ -1,12 +1,13 @@
 use super::AudioSource;
 use crate::audioformat::{StandardFrame, STANDARD_CHANNELS};
 use std::io::Read;
-use dsp::sample::Sample;
+use dsp::{Sample, Frame, Signal};
 
 /// An MP3 decoder.
 pub struct Mp3Source<R> {
 	decoder: minimp3::Decoder<R>,
 	sample_rate: f64,
+	eof: bool,
 	mp3_frame_data: Vec<i16>,
 	mp3_frame_offset: usize
 }
@@ -24,6 +25,7 @@ impl<R> Mp3Source<R> where R: Read {
 		Mp3Source {
 			decoder: decoder,
 			sample_rate: initial_frame.sample_rate as f64,
+			eof: false,
 			mp3_frame_data: initial_frame.data,
 			mp3_frame_offset: 0
 		}
@@ -34,27 +36,36 @@ impl<R> AudioSource for Mp3Source<R> where R: Read {
 	fn sample_hz(&self) -> f64 { self.sample_rate }
 }
 
-impl<R> Iterator for Mp3Source<R> where R: Read {
-	type Item = StandardFrame;
+impl<R> Signal for Mp3Source<R> where R: Read {
+	type Frame = StandardFrame;
 
-	fn next(&mut self) -> Option<StandardFrame> {
-		let mp3_frame_size = self.mp3_frame_data.len();
+	fn next(&mut self) -> StandardFrame {
+		if self.eof {
+			StandardFrame::equilibrium()
+		} else {
+			let mp3_frame_size = self.mp3_frame_data.len();
 
-		if self.mp3_frame_offset == mp3_frame_size {
-			self.mp3_frame_data = match self.decoder.next_frame() {
-				Ok(minimp3::Frame { data, .. }) => data, // TODO: Deal with custom channel counts
-				Err(minimp3::Error::Eof) => return None,
-				Err(e) => panic!("{:?}", e) // TODO: Handle errors
-			};
-			self.mp3_frame_offset = 0
+			if self.mp3_frame_offset == mp3_frame_size {
+				self.mp3_frame_data = match self.decoder.next_frame() {
+					Ok(minimp3::Frame { data, .. }) => data, // TODO: Deal with custom channel counts
+					Err(minimp3::Error::Eof) => {
+						self.eof = true;
+						return StandardFrame::equilibrium();
+					},
+					Err(e) => panic!("{:?}", e) // TODO: Handle errors
+				};
+				self.mp3_frame_offset = 0
+			}
+			
+			let frame: StandardFrame = [
+				self.mp3_frame_data[self.mp3_frame_offset].to_sample(),
+				self.mp3_frame_data[self.mp3_frame_offset + 1].to_sample()
+			];
+
+			self.mp3_frame_offset += STANDARD_CHANNELS;
+			frame
 		}
-		
-		let frame: StandardFrame = [
-			self.mp3_frame_data[self.mp3_frame_offset].to_sample(),
-			self.mp3_frame_data[self.mp3_frame_offset + 1].to_sample()
-		];
-
-		self.mp3_frame_offset += STANDARD_CHANNELS;
-		Some(frame)
 	}
+	
+	fn is_exhausted(&self) -> bool { self.eof }
 }

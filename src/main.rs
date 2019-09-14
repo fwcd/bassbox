@@ -4,6 +4,7 @@ mod processing;
 mod source;
 mod graph;
 mod audioformat;
+mod util;
 
 use graph::new_shared_graph;
 use engine::{AudioEngine, speaker::SpeakerEngine};
