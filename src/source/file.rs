@@ -16,14 +16,15 @@ impl FileFormatSource {
 	/// Tries to recognize the file's format and
 	/// create an appropriate decoder source for it.
 	/// Otherwise returns None.
-	fn from(file_path: &str) -> Option<FileFormatSource> {
+	fn from(file_path: &str) -> Result<FileFormatSource, String> {
 		let splittable_path = file_path.clone();
 		let splitter = splittable_path.split(".");
-		let reader = BufReader::new(File::open(file_path).ok()?);
-		match splitter.last()?.as_ref() {
-			"mp3" => Some(FileFormatSource::Mp3(Mp3Source::new(reader))),
+		let reader = BufReader::new(File::open(file_path).map_err(|e| format!("{:?}", e).to_owned())?);
+		let extension = splitter.last().map_or_else(|| Err("File has no extension"), Ok)?;
+		match extension.as_ref() {
+			"mp3" => Ok(FileFormatSource::Mp3(Mp3Source::new(reader))),
 			// TODO: Other formats
-			_ => None
+			_ => Err(format!("Unsupported file extension: {}", extension).to_owned())
 		}
 	}
 }
@@ -60,8 +61,8 @@ pub struct FileSource {
 }
 
 impl FileSource {
-	pub fn new(file_path: &str) -> Option<FileSource> {
-		Some(FileSource {
+	pub fn new(file_path: &str) -> Result<FileSource, String> {
+		Ok(FileSource {
 			wrapped: FileFormatSource::from(file_path)?,
 			file_path: file_path.to_owned()
 		})

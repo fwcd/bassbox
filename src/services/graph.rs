@@ -88,7 +88,7 @@ impl RpcNode {
 				Pausable::new(
 					Converting::to_sample_hz(
 						target_sample_hz,
-						FileSource::new(file_path.as_ref()).map_or_else(|| Err(server_error("Could not create file source")), Ok)?
+						FileSource::new(file_path.as_ref()).map_err(|e| server_error(e))?
 					),
 					paused
 				)

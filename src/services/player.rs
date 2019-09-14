@@ -87,7 +87,7 @@ impl AudioPlayerService {
 impl AudioPlayerServiceRpc for AudioPlayerService {
 	fn enqueue_file(&self, path: String) -> RpcResult<()> {
 		let source = FileSource::new(path.as_ref())
-			.map_or_else(|| Err(server_error(format!("Could not find or decode file at '{}'", &path))), Ok)?;
+			.map_err(|e| server_error(format!("Could not find or decode file at '{}': {}", &path, e)))?;
 
 		let mut graph = self.shared_graph.lock().unwrap();
 		let src_ref = graph.node_mut(self.src_node).expect("Audio graph has no source node");
