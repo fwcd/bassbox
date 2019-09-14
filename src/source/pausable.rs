@@ -15,7 +15,7 @@ impl<S> Pausable<S> {
 
 	pub fn paused(wrapped: S) -> Pausable<S> { Pausable { wrapped: wrapped, paused: true } }
 	
-	pub fn playing(wrapped: S) -> Pausable<S> { Pausable { wrapped: wrapped, paused: true } }
+	pub fn playing(wrapped: S) -> Pausable<S> { Pausable { wrapped: wrapped, paused: false } }
 	
 	pub fn with<T>(&self, wrapped: T) -> Pausable<T> { Pausable { wrapped: wrapped, paused: self.paused } }
 }
