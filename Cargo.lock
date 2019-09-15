@@ -66,7 +66,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "bassbox-app"
+name = "bassbox"
 version = "0.1.0"
 dependencies = [
  "bassbox-core 0.1.0",
