@@ -27,7 +27,8 @@ pub struct BackgroundEngine {
 #[derive(Debug)]
 pub enum ControlMsg {
 	Pause,
-	Play
+	Play,
+	Custom(String)
 }
 
 /// A wrapper around an MPSC channel that

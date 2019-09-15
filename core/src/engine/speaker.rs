@@ -55,7 +55,7 @@ impl AudioEngine for SpeakerEngine {
 							with_buffer_of!(data, write_silence);
 							paused = true
 						}
-						// _ => println!("Control message not recognized by the speaker/CPAL engine: {:?}", msg)
+						_ => println!("Control message not recognized by the speaker/CPAL engine: {:?}", msg)
 					}
 				}
 			
