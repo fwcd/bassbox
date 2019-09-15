@@ -3,7 +3,7 @@ use jsonrpc_derive::rpc;
 use serde::{Serialize, Deserialize};
 use std::collections::HashMap;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(tag = "type")]
 /// A node in the audio graph.
 pub enum RpcNode {
@@ -51,7 +51,7 @@ pub enum RpcNode {
 pub type RpcNodeIndex = usize;
 pub type RpcEdgeIndex = usize;
 
-#[derive(Serialize, Deserialize, Copy, Clone)]
+#[derive(Serialize, Deserialize, Copy, Clone, Debug)]
 /// An edge in the audio graph.
 pub struct RpcEdge {
 	pub src: RpcNodeIndex,
@@ -64,7 +64,7 @@ impl RpcEdge {
 	}
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 /// The audio graph.
 pub struct RpcGraph {
 	pub nodes: HashMap<RpcNodeIndex, RpcNode>,

@@ -30,16 +30,18 @@ fn main() {
 	opts.optopt("t", "token", "Optionally provides an authentication token if required by the engine", "TOKEN");
 	
 	let parsed_args = opts.parse(&args[1..]).unwrap();
-	if !parsed_args.opt_present("engine") {
-		println!("Missing engine.");
-		print_usage(&program, opts);
-		return;
-	}
-	let engine_str = parsed_args.opt_str("engine");
+	let engine_str = match parsed_args.opt_str("engine") {
+		Some(s) => s,
+		None => {
+			println!("Missing engine.");
+			print_usage(&program, opts);
+			return;
+		}
+	};
 	
 	// Spawn engine
 	let shared_graph = new_shared_graph();
-	let background_engine = match engine_str.unwrap().as_str() {
+	let background_engine = match engine_str.as_str() {
 		"speaker" => SpeakerEngine.run_async(shared_graph.clone()),
 		_ => panic!("Unrecognized engine, try one of these: {:?}.", supported_engines)
 	};
