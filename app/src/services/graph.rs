@@ -3,13 +3,17 @@ use jsonrpc_core::{Error as RpcError, ErrorCode as RpcErrorCode};
 use dsp::EdgeRef;
 use bassbox_graph_api::{RpcNode, RpcNodeIndex, RpcEdge, RpcEdgeIndex, RpcGraph, AudioGraphServiceRpc};
 use super::rpcutils::server_error;
-use crate::processing::{DspNode, filter::{Disableable, CutoffFreq, IIRHighpassFilter, IIRLowpassFilter}};
-use crate::graph::{AudioGraph, SharedAudioGraph};
-use crate::source::{AudioSource, pausable::Pausable, conv::Converting, file::FileSource, command::CommandSource};
-use crate::engine::BackgroundEngine;
+use bassbox_core::processing::{DspNode, filter::{Disableable, CutoffFreq, IIRHighpassFilter, IIRLowpassFilter}};
+use bassbox_core::graph::{AudioGraph, SharedAudioGraph};
+use bassbox_core::source::{AudioSource, pausable::Pausable, conv::Converting, file::FileSource, command::CommandSource};
+use bassbox_core::engine::BackgroundEngine;
 
-impl From<&DspNode> for RpcNode {
-	fn from(node: &DspNode) -> RpcNode {
+trait FromDspNodeExt {
+	fn from_dsp_node(node: &DspNode) -> Self;
+}
+
+impl FromDspNodeExt for RpcNode {
+	fn from_dsp_node(node: &DspNode) -> RpcNode {
 		match *node {
 			DspNode::Empty => RpcNode::Empty,
 			DspNode::Silence => RpcNode::Silence,
@@ -83,7 +87,7 @@ trait FromAudioGraphExt {
 impl FromAudioGraphExt for RpcGraph {
 	fn from_audio_graph(graph: &AudioGraph) -> RpcGraph {
 		RpcGraph {
-			nodes: graph.node_references().map(|(id, node)| (id.index(), RpcNode::from(node))).collect(),
+			nodes: graph.node_references().map(|(id, node)| (id.index(), RpcNode::from_dsp_node(node))).collect(),
 			edges: graph.edge_references().map(|edge| RpcEdge::between(edge.source().index(), edge.target().index())).collect(),
 			master: graph.master_index().map(|i| i.index())
 		}

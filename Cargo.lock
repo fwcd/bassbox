@@ -69,17 +69,25 @@ dependencies = [
 name = "bassbox-app"
 version = "0.1.0"
 dependencies = [
+ "bassbox-core 0.1.0",
  "bassbox-graph-api 0.1.0",
- "byteorder 1.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "cpal 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "dsp-chain 0.13.1 (git+https://github.com/fwcd/dsp-chain?rev=55ecc85)",
  "getopts 0.2.21 (registry+https://github.com/rust-lang/crates.io-index)",
  "jsonrpc-core 13.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "jsonrpc-core-client 13.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "jsonrpc-derive 13.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "jsonrpc-stdio-server 13.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "minimp3 0.3.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.100 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "bassbox-core"
+version = "0.1.0"
+dependencies = [
+ "byteorder 1.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cpal 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "dsp-chain 0.13.1 (git+https://github.com/fwcd/dsp-chain?rev=55ecc85)",
+ "minimp3 0.3.3 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]

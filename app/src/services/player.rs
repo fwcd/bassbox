@@ -2,10 +2,10 @@ use jsonrpc_core::Result as RpcResult;
 use jsonrpc_derive::rpc;
 use super::rpcutils::server_error;
 use dsp::NodeIndex;
-use crate::source::{pausable::Pausable, conv::Converting, file::FileSource};
-use crate::graph::SharedAudioGraph;
-use crate::processing::{DspNode, filter::{Disableable, IIRLowpassFilter, IIRHighpassFilter}};
-use crate::engine::{BackgroundEngine, ControlMsg};
+use bassbox_core::source::{pausable::Pausable, conv::Converting, file::FileSource};
+use bassbox_core::graph::SharedAudioGraph;
+use bassbox_core::processing::{DspNode, filter::{Disableable, IIRLowpassFilter, IIRHighpassFilter}};
+use bassbox_core::engine::{BackgroundEngine, ControlMsg};
 
 /// The audio playing service methods exposed via JSON-RPC.
 #[rpc]

@@ -5,16 +5,16 @@ authors = ["fwcd"]
 edition = "2018"
 
 [dependencies]
+# Sibling modules
+bassbox-core = { path = "../core" }
+bassbox-graph-api = { path = "../graph-api" }
 # General
 getopts = "0.2"
-byteorder = "1.3.2"
 # Audio
 # TODO: Update to official version once merged
+# TODO: Remove and replace by graph-api
 dsp-chain = { git = "https://github.com/fwcd/dsp-chain", rev = "55ecc85" }
-cpal = "0.10.0"
-minimp3 = "0.3.3"
 # RPC
-bassbox-graph-api = { path = "../graph-api" }
 jsonrpc-core = "13.0.0"
 jsonrpc-derive = "13.0.0"
 jsonrpc-stdio-server = "13.0.0"
