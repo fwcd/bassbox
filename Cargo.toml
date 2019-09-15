@@ -2,5 +2,5 @@
 members = [
 	"app",
 	"core",
-	"graph-api"
+	"rpc-api"
 ]

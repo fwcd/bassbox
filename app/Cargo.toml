@@ -7,12 +7,12 @@ edition = "2018"
 [dependencies]
 # Sibling modules
 bassbox-core = { path = "../core" }
-bassbox-graph-api = { path = "../graph-api" }
+bassbox-rpc-api = { path = "../rpc-api" }
 # General
 getopts = "0.2"
 # Audio
 # TODO: Update to official version once merged
-# TODO: Remove and replace by graph-api
+# TODO: Remove and replace by rpc-api
 dsp-chain = { git = "https://github.com/fwcd/dsp-chain", rev = "55ecc85" }
 # RPC
 jsonrpc-core = "13.0.0"

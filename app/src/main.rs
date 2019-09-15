@@ -5,7 +5,7 @@ use bassbox_core::engine::{AudioEngine, speaker::SpeakerEngine};
 use bassbox_core::processing::DspNode;
 use getopts::Options;
 use services::player::{AudioPlayerServiceRpc, AudioPlayerService};
-use bassbox_graph_api::AudioGraphServiceRpc;
+use bassbox_rpc_api::AudioGraphServiceRpc;
 use services::graph::AudioGraphService;
 use std::env;
 use jsonrpc_core::IoHandler;
@@ -26,7 +26,6 @@ fn main() {
 	let program = args[0].clone();
 	
 	let mut opts = Options::new();
-	opts.optflag("r", "raw-graph", "If set, an 'empty' audio graph containing only a single master node will be used and the 'audioPlayer' service will not be available");
 	opts.optopt("e", "engine", "Specifies which audio output is used", format!("[{}]", supported_engines.join("|")).as_str());
 	opts.optopt("t", "token", "Optionally provides an authentication token if required by the engine", "TOKEN");
 	
@@ -47,14 +46,7 @@ fn main() {
 
 	// Setup RPC server
 	let mut io = IoHandler::new();
-	if parsed_args.opt_present("raw-graph") {
-		let mut graph = shared_graph.lock().unwrap();
-		let master = graph.add_node(DspNode::Empty);
-		graph.set_master(Some(master));
-	} else {
-		io.extend_with(AudioPlayerService::constructing_graph(shared_graph.clone(), background_engine.clone()).to_delegate());
-	}
-	io.extend_with(AudioGraphService::using_graph(shared_graph.clone(), background_engine.clone()).to_delegate());
+	io.extend_with(AudioGraphService::using_graph(shared_graph, background_engine.clone()).to_delegate());
 	
 	ServerBuilder::new(io).build();
 }

@@ -11,6 +11,11 @@ pub type AudioGraph = dsp::Graph<StandardFrame, DspNode>;
 /// (such as RPC-mechanisms).
 pub type SharedAudioGraph = Arc<Mutex<AudioGraph>>;
 
+/// Creates a new, shared atomically reference-counted
+/// audio graph with a single, empty master node.
 pub fn new_shared_graph() -> SharedAudioGraph {
-	Arc::new(Mutex::new(AudioGraph::new()))
+	let mut graph = AudioGraph::new();
+	let master = graph.add_node(DspNode::Empty);
+	graph.set_master(Some(master));
+	Arc::new(Mutex::new(graph))
 }
