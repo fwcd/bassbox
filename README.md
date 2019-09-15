@@ -5,19 +5,14 @@ An experimental audio graph library and player written in Rust.
 Build and run the application using `cargo run -- -e speaker` and play a song by entering:
 
 ```json
-{"jsonrpc":"2.0","id":0,"method":"audioPlayer.enqueueFile","params":["path/to/a/song.mp3"]}
+{"jsonrpc":"2.0","id":0,"method":"audioGraph.addNode","params":[{"type":"File","filePath":"path/to/song.mp3"}]}
+{"jsonrpc":"2.0","id":0,"method":"audioGraph.addEdge","params":[{"src":1,"dest":0}]}
 ```
 
-You can pause the song with
+You can fetch the audio graph using
 
 ```json
-{"jsonrpc":"2.0","id":0,"method":"audioPlayer.pause"}
-```
-
-and continue playback using
-
-```json
-{"jsonrpc":"2.0","id":0,"method":"audioPlayer.play"}
+{"jsonrpc":"2.0","id":0,"method":"audioGraph.get"}
 ```
 
 ## Architecture
