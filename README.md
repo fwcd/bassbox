@@ -1,5 +1,5 @@
 # Bassbox
-An experimental audio graph library and player written in Rust.
+An experimental audio graph player written in Rust that can either be [used as a library](core/README.md) or [controlled via JSON-RPC](app/README.md).
 
 ## Try it
 Build and run the application using `cargo run -- -e speaker` and play a song by entering:
