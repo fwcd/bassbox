@@ -70,6 +70,7 @@ impl AudioEngine for SpeakerEngine {
 						// Read audio from graph into temporary buffer
 						let sample_count = buffer_sample_count(&data).unwrap_or(0);
 						let frame_count = sample_count / STANDARD_CHANNELS;
+						// TODO: Allocate Vec once, then grow as needed
 						let mut audio: Vec<StandardFrame> = vec![StandardFrame::equilibrium(); frame_count];
 						shared_graph.lock().unwrap().audio_requested(&mut audio, sample_hz);
 					
