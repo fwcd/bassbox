@@ -1,0 +1,13 @@
+[package]
+name = "bassbox-rpc-api"
+version = "0.1.0"
+authors = ["fwcd"]
+edition = "2018"
+
+[dependencies]
+# RPC
+jsonrpc-core = "13.0.0"
+jsonrpc-derive = "13.0.0"
+## Required by jsonrpc-derive, see https://github.com/paritytech/jsonrpc/issues/481
+serde = "1.0.99"
+jsonrpc-core-client = "13.0.0"

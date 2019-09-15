@@ -1,58 +1,12 @@
 use jsonrpc_core::Result as RpcResult;
 use jsonrpc_core::{Error as RpcError, ErrorCode as RpcErrorCode};
-use jsonrpc_derive::rpc;
-use serde::{Serialize, Deserialize};
-use std::collections::HashMap;
 use dsp::EdgeRef;
+use bassbox_rpc_api::services::graph::{RpcNode, RpcNodeIndex, RpcEdge, RpcEdgeIndex, RpcGraph, AudioGraphServiceRpc};
 use super::rpcutils::server_error;
 use crate::processing::{DspNode, filter::{Disableable, CutoffFreq, IIRHighpassFilter, IIRLowpassFilter}};
 use crate::graph::{AudioGraph, SharedAudioGraph};
 use crate::source::{AudioSource, pausable::Pausable, conv::Converting, file::FileSource, command::CommandSource};
 use crate::engine::BackgroundEngine;
-
-#[derive(Serialize, Deserialize)]
-#[serde(tag = "type")]
-pub enum RpcNode {
-	/// An empty/passthrough node
-	Empty,
-	/// An actively silencing node
-	Silence,
-	/// A volume-controllable node
-	#[serde(rename_all = "camelCase")]
-	Volume {
-		#[serde(default)] level: f32
-	},
-	/// A file source
-	#[serde(rename_all = "camelCase")]
-	File {
-		file_path: String,
-		#[serde(default)] paused: bool
-	},
-	/// A command source
-	#[serde(rename_all = "camelCase")]
-	Command {
-		command: String,
-		#[serde(default)] args: Vec<String>,
-		sample_hz: f64,
-		paused: bool
-	},
-	/// A lowpass filter
-	#[serde(rename_all = "camelCase")]
-	IIRLowpass {
-		#[serde(default)] cutoff_hz: f32,
-		#[serde(default)] disabled: bool
-	},
-	/// A highpass filter
-	#[serde(rename_all = "camelCase")]
-	IIRHighpass {
-		#[serde(default)] cutoff_hz: f32,
-		#[serde(default)] disabled: bool
-	},
-	/// A dynamically dispatched filter (note that setting these is currently not supported)
-	DynFilter,
-	/// Any other node that currently has no RPC-serializable equivalent
-	Other
-}
 
 impl From<&DspNode> for RpcNode {
 	fn from(node: &DspNode) -> RpcNode {
@@ -78,8 +32,12 @@ impl From<&DspNode> for RpcNode {
 	}
 }
 
-impl RpcNode {
-	pub fn into_dsp_node(self, target_sample_hz: f64) -> RpcResult<DspNode> {
+trait IntoDspNodeExt {
+	fn into_dsp_node(self, target_sample_hz: f64) -> RpcResult<DspNode>;
+}
+
+impl IntoDspNodeExt for RpcNode {
+	fn into_dsp_node(self, target_sample_hz: f64) -> RpcResult<DspNode> {
 		match self {
 			RpcNode::Empty => Ok(DspNode::Empty),
 			RpcNode::Silence => Ok(DspNode::Silence),
@@ -118,30 +76,12 @@ impl RpcNode {
 	}
 }
 
-type RpcNodeIndex = usize;
-type RpcEdgeIndex = usize;
-
-#[derive(Serialize, Deserialize, Copy, Clone)]
-pub struct RpcEdge {
-	pub src: RpcNodeIndex,
-	pub dest: RpcNodeIndex
+trait FromAudioGraphExt {
+	fn from_audio_graph(graph: &AudioGraph) -> Self;
 }
 
-impl RpcEdge {
-	pub fn between(src: RpcNodeIndex, dest: RpcNodeIndex) -> RpcEdge {
-		RpcEdge { src: src, dest: dest }
-	}
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct RpcGraph {
-	pub nodes: HashMap<RpcNodeIndex, RpcNode>,
-	pub edges: Vec<RpcEdge>,
-	pub master: Option<RpcNodeIndex>
-}
-
-impl RpcGraph {
-	pub fn from(graph: &AudioGraph) -> RpcGraph {
+impl FromAudioGraphExt for RpcGraph {
+	fn from_audio_graph(graph: &AudioGraph) -> RpcGraph {
 		RpcGraph {
 			nodes: graph.node_references().map(|(id, node)| (id.index(), RpcNode::from(node))).collect(),
 			edges: graph.edge_references().map(|edge| RpcEdge::between(edge.source().index(), edge.target().index())).collect(),
@@ -150,34 +90,9 @@ impl RpcGraph {
 	}
 }
 
-/// The audio graph methods exposed via JSON-RPC
-#[rpc]
-pub trait AudioGraphServiceRpc {
-	/// Fetches the current state of the graph
-	#[rpc(name = "audioGraph.get")]
-	fn get(&self) -> RpcResult<RpcGraph>;
-	
-	/// Adds a node to the graph, returning its index
-	#[rpc(name = "audioGraph.addNode")]
-	fn add_node(&self, node: RpcNode) -> RpcResult<RpcNodeIndex>;
-	
-	/// Creates a new template 
-	
-	/// Removes a node from the graph
-	#[rpc(name = "audioGraph.removeNode")]
-	fn remove_node(&self, index: RpcNodeIndex) -> RpcResult<()>;
-	
-	/// Replaces a node from the graph
-	#[rpc(name = "audioGraph.replaceNode")]
-	fn replace_node(&self, index: RpcNodeIndex, node: RpcNode) -> RpcResult<()>;
-	
-	/// Adds an edge to the graph
-	#[rpc(name = "audioGraph.addEdge")]
-	fn add_edge(&self, edge: RpcEdge) -> RpcResult<RpcEdgeIndex>;
-	
-	// TODO: removeEdge
-}
-
+/// The audio graph service implementation that holds a
+/// reference to the shared audio graph and the engine's
+/// control channel.
 pub struct AudioGraphService {
 	shared_graph: SharedAudioGraph,
 	engine: BackgroundEngine
@@ -192,7 +107,7 @@ impl AudioGraphService {
 impl AudioGraphServiceRpc for AudioGraphService {
 	fn get(&self) -> RpcResult<RpcGraph> {
 		let graph = self.shared_graph.lock().unwrap();
-		Ok(RpcGraph::from(&graph))
+		Ok(RpcGraph::from_audio_graph(&graph))
 	}
 	
 	fn add_node(&self, node: RpcNode) -> RpcResult<RpcNodeIndex> {

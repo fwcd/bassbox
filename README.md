@@ -1,5 +1,5 @@
 # Bassbox
-An experimental audio player written in Rust and controllable via JSON-RPC.
+An experimental audio graph player written in Rust and controllable via JSON-RPC.
 
 ## Try it
 Build and run the application using `cargo run -- -e speaker` and play a song by entering:

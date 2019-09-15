@@ -11,7 +11,8 @@ use engine::{AudioEngine, speaker::SpeakerEngine};
 use processing::DspNode;
 use getopts::Options;
 use services::player::{AudioPlayerServiceRpc, AudioPlayerService};
-use services::graph::{AudioGraphServiceRpc, AudioGraphService};
+use bassbox_rpc_api::services::graph::AudioGraphServiceRpc;
+use services::graph::AudioGraphService;
 use std::env;
 use jsonrpc_core::IoHandler;
 use jsonrpc_stdio_server::ServerBuilder;
@@ -20,6 +21,8 @@ fn print_usage(program: &str, opts: Options) {
 	let brief = format!("Usage: {} [--engine ENGINE] [options]", program);
 	print!("{}", opts.usage(&brief));
 }
+
+// TODO: Support HTTP as an alternative to Stdio
 
 fn main() {
 	let supported_engines = ["speaker"];
