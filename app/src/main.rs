@@ -2,9 +2,7 @@ pub mod services;
 
 use bassbox_core::graph::new_shared_graph;
 use bassbox_core::engine::{AudioEngine, speaker::SpeakerEngine};
-use bassbox_core::processing::DspNode;
 use getopts::Options;
-use services::player::{AudioPlayerServiceRpc, AudioPlayerService};
 use bassbox_rpc_api::AudioGraphServiceRpc;
 use services::graph::AudioGraphService;
 use std::env;
