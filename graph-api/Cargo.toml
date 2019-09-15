@@ -1,5 +1,5 @@
 [package]
-name = "bassbox-rpc-api"
+name = "bassbox-graph-api"
 version = "0.1.0"
 authors = ["fwcd"]
 edition = "2018"

@@ -1,7 +1,7 @@
 use jsonrpc_core::Result as RpcResult;
 use jsonrpc_core::{Error as RpcError, ErrorCode as RpcErrorCode};
 use dsp::EdgeRef;
-use bassbox_rpc_api::services::graph::{RpcNode, RpcNodeIndex, RpcEdge, RpcEdgeIndex, RpcGraph, AudioGraphServiceRpc};
+use bassbox_graph_api::{RpcNode, RpcNodeIndex, RpcEdge, RpcEdgeIndex, RpcGraph, AudioGraphServiceRpc};
 use super::rpcutils::server_error;
 use crate::processing::{DspNode, filter::{Disableable, CutoffFreq, IIRHighpassFilter, IIRLowpassFilter}};
 use crate::graph::{AudioGraph, SharedAudioGraph};

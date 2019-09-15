@@ -11,7 +11,7 @@ use engine::{AudioEngine, speaker::SpeakerEngine};
 use processing::DspNode;
 use getopts::Options;
 use services::player::{AudioPlayerServiceRpc, AudioPlayerService};
-use bassbox_rpc_api::services::graph::AudioGraphServiceRpc;
+use bassbox_graph_api::AudioGraphServiceRpc;
 use services::graph::AudioGraphService;
 use std::env;
 use jsonrpc_core::IoHandler;
@@ -22,7 +22,7 @@ fn print_usage(program: &str, opts: Options) {
 	print!("{}", opts.usage(&brief));
 }
 
-// TODO: Support HTTP as an alternative to Stdio
+// TODO: Support HTTP/MPSC as an alternative to Stdio
 
 fn main() {
 	let supported_engines = ["speaker"];
@@ -51,8 +51,8 @@ fn main() {
 		_ => panic!("Unrecognized engine, try one of these: {:?}.", supported_engines)
 	};
 
-	// Setup RPC services
-	let mut io = IoHandler::default();
+	// Setup RPC server
+	let mut io = IoHandler::new();
 	if parsed_args.opt_present("raw-graph") {
 		let mut graph = shared_graph.lock().unwrap();
 		let master = graph.add_node(DspNode::Empty);

@@ -14,7 +14,7 @@ dsp-chain = { git = "https://github.com/fwcd/dsp-chain", rev = "55ecc85" }
 cpal = "0.10.0"
 minimp3 = "0.3.3"
 # RPC
-bassbox-rpc-api = { path = "../rpc-api" }
+bassbox-graph-api = { path = "../graph-api" }
 jsonrpc-core = "13.0.0"
 jsonrpc-derive = "13.0.0"
 jsonrpc-stdio-server = "13.0.0"
