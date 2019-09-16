@@ -9,7 +9,7 @@ use std::sync::mpsc;
 /// A blocking audio playing engine.
 pub trait AudioEngine {
 	/// Runs the engine on a background thread.
-	fn run_async(self, context: SharedAudioGraph) -> BackgroundEngine;
+	fn run_async(self, shared_graph: SharedAudioGraph) -> BackgroundEngine;
 }
 
 /// Represents an engine running asynchronously
