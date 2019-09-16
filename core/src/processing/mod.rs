@@ -3,7 +3,7 @@
 
 pub mod filter;
 
-use dsp::Node;
+use dsp::{Signal, Node};
 use dsp::sample::Frame;
 use filter::{Filter, MovingAverageFilter, IIRLowpassFilter, IIRHighpassFilter, Disableable};
 use crate::source::{AudioSource, file::FileSource, command::CommandSource, conv::Converting, pausable::Pausable};
@@ -53,13 +53,13 @@ impl Empty for DspNode {
 	fn empty() -> Self { Self::Empty }
 }
 
-fn read_signal_into<S, F>(buffer: &mut [F], source: &mut S) where S: AudioSource<Frame=F>, F: Frame {
+pub fn read_signal_into<S, F>(buffer: &mut [F], source: &mut S) where S: Signal<Frame=F>, F: Frame {
 	for i in 0..buffer.len() {
 		buffer[i] = source.next();
 	}
 }
 
-fn apply_filter<L, F>(buffer: &mut [F], filter: &mut L) where L: Filter<Frame=F>, F: Frame {
+pub fn apply_filter<L, F>(buffer: &mut [F], filter: &mut L) where L: Filter<Frame=F>, F: Frame {
 	for frame in buffer {
 		*frame = filter.apply(*frame);
 	}
