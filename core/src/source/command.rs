@@ -25,7 +25,7 @@ impl CommandSource {
 				.stdin(Stdio::null())
 				.stderr(Stdio::null())
 				.stdout(Stdio::piped())      
-				.spawn().map_err(|e| format!("{:?}", e).to_owned())?
+				.spawn().map_err(|e| format!("{:?}", e))?
 				.stdout.map_or_else(|| Err("Could not fetch command's stdout".to_owned()), Ok)?,
 			command: command.to_owned(),
 			args: args.iter().map(|s| (*s).to_owned()).collect(),

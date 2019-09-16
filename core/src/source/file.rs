@@ -19,7 +19,7 @@ impl FileFormatSource {
 	fn from(file_path: &str) -> Result<FileFormatSource, String> {
 		let splittable_path = file_path.clone();
 		let splitter = splittable_path.split(".");
-		let reader = BufReader::new(File::open(file_path).map_err(|e| format!("{:?}", e).to_owned())?);
+		let reader = BufReader::new(File::open(file_path).map_err(|e| format!("{:?}", e))?);
 		let extension = splitter.last().map_or_else(|| Err("File has no extension"), Ok)?;
 		match extension.as_ref() {
 			"mp3" => Ok(FileFormatSource::Mp3(Mp3Source::new(reader))),

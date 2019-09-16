@@ -22,6 +22,7 @@ pub enum DspNode {
 	Volume(f32),
 	File(Pausable<Converting<FileSource>>),
 	Command(Pausable<Converting<CommandSource>>),
+	DynSource(Box<dyn AudioSource<Frame=StandardFrame> + Send>),
 	MovingAverage(Disableable<MovingAverageFilter>),
 	IIRLowpass(Disableable<IIRLowpassFilter>),
 	IIRHighpass(Disableable<IIRHighpassFilter>),
@@ -37,6 +38,7 @@ impl Node<StandardFrame> for DspNode {
 			// Static source implementations to avoid boxing
 			DspNode::File(ref mut source) => read_signal_into(buffer, source),
 			DspNode::Command(ref mut source) => read_signal_into(buffer, source),
+			DspNode::DynSource(ref mut source) => read_signal_into(buffer, source),
 			// Static filter implementations to avoid boxing
 			DspNode::MovingAverage(ref mut filter) => apply_filter(buffer, filter),
 			DspNode::IIRLowpass(ref mut filter) => apply_filter(buffer, filter),

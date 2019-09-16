@@ -62,3 +62,11 @@ impl<F> Signal for EquilibriumSource<F> where F: Frame {
 
 	fn next(&mut self) -> F { F::equilibrium() }
 }
+
+impl<F> AudioSource for Box<dyn AudioSource<Frame=F>> where F: Frame {
+	fn sample_hz(&self) -> f64 { (**self).sample_hz() }
+}
+
+impl<F> AudioSource for Box<dyn AudioSource<Frame=F> + Send> where F: Frame {
+	fn sample_hz(&self) -> f64 { (**self).sample_hz() }
+}
