@@ -1,5 +1,4 @@
 use dsp::{Signal, Frame};
-use crate::audioformat::StandardFrame;
 use super::AudioSource;
 
 /// A source that can be paused. When paused, the

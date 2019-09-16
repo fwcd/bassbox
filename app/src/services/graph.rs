@@ -12,12 +12,12 @@ use bassbox_core::engine::BackgroundEngine;
 /// reference to the shared audio graph and the engine's
 /// control channel.
 pub struct AudioGraphService {
-	shared_graph: SharedAudioGraph,
+	shared_graph: SharedAudioGraph<DspNode>,
 	engine: BackgroundEngine
 }
 
 impl AudioGraphService {
-	pub fn using_graph(shared_graph: SharedAudioGraph, engine: BackgroundEngine) -> AudioGraphService {
+	pub fn using_graph(shared_graph: SharedAudioGraph<DspNode>, engine: BackgroundEngine) -> AudioGraphService {
 		AudioGraphService { shared_graph: shared_graph, engine: engine }
 	}
 }
@@ -132,11 +132,11 @@ impl IntoDspNodeExt for RpcNode {
 }
 
 trait FromAudioGraphExt {
-	fn from_audio_graph(graph: &AudioGraph) -> Self;
+	fn from_audio_graph(graph: &AudioGraph<DspNode>) -> Self;
 }
 
 impl FromAudioGraphExt for RpcGraph {
-	fn from_audio_graph(graph: &AudioGraph) -> RpcGraph {
+	fn from_audio_graph(graph: &AudioGraph<DspNode>) -> RpcGraph {
 		RpcGraph {
 			nodes: graph.node_references().map(|(id, node)| (id.index(), RpcNode::from_dsp_node(node))).collect(),
 			edges: graph.edge_references().map(|edge| RpcEdge::between(edge.source().index(), edge.target().index())).collect(),

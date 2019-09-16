@@ -1,21 +1,22 @@
+use dsp::Node;
 use std::sync::{Arc, Mutex};
-use crate::processing::DspNode;
 use crate::audioformat::StandardFrame;
+use crate::util::empty::Empty;
 
 pub type NodeIndex = dsp::NodeIndex;
 pub type EdgeIndex = dsp::EdgeIndex;
-pub type AudioGraph = dsp::Graph<StandardFrame, DspNode>;
+pub type AudioGraph<N> = dsp::Graph<StandardFrame, N>;
 
 /// The audio graph which is shared between
 /// an engine and possibly control threads
 /// (such as RPC-mechanisms).
-pub type SharedAudioGraph = Arc<Mutex<AudioGraph>>;
+pub type SharedAudioGraph<N> = Arc<Mutex<AudioGraph<N>>>;
 
 /// Creates a new, shared atomically reference-counted
 /// audio graph with a single, empty master node.
-pub fn new_shared_graph() -> SharedAudioGraph {
+pub fn new_shared_graph<N>() -> SharedAudioGraph<N> where N: Empty + Node<StandardFrame> {
 	let mut graph = AudioGraph::new();
-	let master = graph.add_node(DspNode::Empty);
+	let master = graph.add_node(N::empty());
 	graph.set_master(Some(master));
 	Arc::new(Mutex::new(graph))
 }

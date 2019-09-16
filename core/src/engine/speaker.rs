@@ -23,7 +23,7 @@ macro_rules! with_buffer_of {
 pub struct SpeakerEngine;
 
 impl AudioEngine for SpeakerEngine {
-	fn run_async(self, shared_graph: SharedAudioGraph) -> BackgroundEngine {
+	fn run_async<N>(self, shared_graph: SharedAudioGraph<N>) -> BackgroundEngine where N: Node<StandardFrame> + Send + 'static {
 		// Setup CPAL
 		let host = cpal::default_host();
 		let event_loop = host.event_loop();

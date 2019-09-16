@@ -8,6 +8,7 @@ use dsp::sample::Frame;
 use filter::{Filter, MovingAverageFilter, IIRLowpassFilter, IIRHighpassFilter, Disableable};
 use crate::source::{AudioSource, file::FileSource, command::CommandSource, conv::Converting, pausable::Pausable};
 use crate::audioformat::StandardFrame;
+use crate::util::empty::Empty;
 
 /// An audio processing node which can either be a source
 /// or an intermediate node that performs some transformation
@@ -32,20 +33,24 @@ pub enum DspNode {
 impl Node<StandardFrame> for DspNode {
 	fn audio_requested(&mut self, buffer: &mut [StandardFrame], _sample_hz: f64) {
 		match *self {
-			DspNode::Empty => (),
-			DspNode::Silence => silence(buffer),
-			DspNode::Volume(factor) => dsp::slice::map_in_place(buffer, |frame| frame.scale_amp(factor)),
+			Self::Empty => (),
+			Self::Silence => silence(buffer),
+			Self::Volume(factor) => dsp::slice::map_in_place(buffer, |frame| frame.scale_amp(factor)),
 			// Static source implementations to avoid boxing
-			DspNode::File(ref mut source) => read_signal_into(buffer, source),
-			DspNode::Command(ref mut source) => read_signal_into(buffer, source),
-			DspNode::DynSource(ref mut source) => read_signal_into(buffer, source),
+			Self::File(ref mut source) => read_signal_into(buffer, source),
+			Self::Command(ref mut source) => read_signal_into(buffer, source),
+			Self::DynSource(ref mut source) => read_signal_into(buffer, source),
 			// Static filter implementations to avoid boxing
-			DspNode::MovingAverage(ref mut filter) => apply_filter(buffer, filter),
-			DspNode::IIRLowpass(ref mut filter) => apply_filter(buffer, filter),
-			DspNode::IIRHighpass(ref mut filter) => apply_filter(buffer, filter),
-			DspNode::DynFilter(ref mut filter) => apply_filter(buffer, filter)
+			Self::MovingAverage(ref mut filter) => apply_filter(buffer, filter),
+			Self::IIRLowpass(ref mut filter) => apply_filter(buffer, filter),
+			Self::IIRHighpass(ref mut filter) => apply_filter(buffer, filter),
+			Self::DynFilter(ref mut filter) => apply_filter(buffer, filter)
 		}
 	}
+}
+
+impl Empty for DspNode {
+	fn empty() -> Self { Self::Empty }
 }
 
 fn read_signal_into<S, F>(buffer: &mut [F], source: &mut S) where S: AudioSource<Frame=F>, F: Frame {

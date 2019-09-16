@@ -3,13 +3,15 @@
 
 pub mod speaker;
 
-use crate::graph::SharedAudioGraph;
 use std::sync::mpsc;
+use dsp::Node;
+use crate::graph::SharedAudioGraph;
+use crate::audioformat::StandardFrame;
 
 /// A blocking audio playing engine.
 pub trait AudioEngine {
 	/// Runs the engine on a background thread.
-	fn run_async(self, shared_graph: SharedAudioGraph) -> BackgroundEngine;
+	fn run_async<N>(self, shared_graph: SharedAudioGraph<N>) -> BackgroundEngine where N: Node<StandardFrame> + Send + 'static;
 }
 
 /// Represents an engine running asynchronously
