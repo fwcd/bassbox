@@ -30,6 +30,8 @@ pub enum RpcNode {
 		sample_hz: f64,
 		paused: bool
 	},
+	/// A dynamically dispatched source
+	DynSource,
 	/// A lowpass filter
 	#[serde(rename_all = "camelCase")]
 	IIRLowpass {

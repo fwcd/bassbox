@@ -77,6 +77,7 @@ impl FromDspNodeExt for RpcNode {
 				sample_hz: converting_source.wrapped().sample_hz(),
 				paused: paused
 			},
+			DspNode::DynSource(..) => RpcNode::DynSource,
 			DspNode::Volume(volume) => RpcNode::Volume { level: volume },
 			DspNode::IIRLowpass(Disableable { wrapped: ref filter, disabled }) => RpcNode::IIRLowpass { cutoff_hz: filter.cutoff_hz(), disabled: disabled },
 			DspNode::IIRHighpass(Disableable { wrapped: ref filter, disabled }) => RpcNode::IIRHighpass { cutoff_hz: filter.cutoff_hz(), disabled: disabled },
@@ -116,7 +117,7 @@ impl IntoDspNodeExt for RpcNode {
 			)),
 			RpcNode::IIRLowpass { cutoff_hz, disabled } => Ok(DspNode::IIRLowpass(Disableable::new(IIRLowpassFilter::from_cutoff_hz(cutoff_hz, target_sample_hz), disabled))),
 			RpcNode::IIRHighpass { cutoff_hz, disabled } => Ok(DspNode::IIRHighpass(Disableable::new(IIRHighpassFilter::from_cutoff_hz(cutoff_hz, target_sample_hz), disabled))),
-			RpcNode::DynFilter => Err(RpcError {
+			RpcNode::DynFilter | RpcNode::DynSource => Err(RpcError {
 				code: RpcErrorCode::InvalidParams,
 				message: "Dynamic DSP nodes can currently not be crated from RPC nodes".to_owned(),
 				data: None
