@@ -33,6 +33,13 @@ impl<S> Converting<S> where S: AudioSource, <S::Frame as Frame>::Sample: DuplexS
 			Either::Right(ref converter) => converter.source()
 		}
 	}
+	
+	pub fn wrapped_mut(&mut self) -> &mut S {
+		match self.inner {
+			Either::Left(ref mut wrapped) => wrapped,
+			Either::Right(ref mut converter) => converter.source_mut()
+		}
+	}
 }
 
 impl<S> AudioSource for Converting<S> where S: AudioSource, <S::Frame as Frame>::Sample: DuplexSample<f64> {
