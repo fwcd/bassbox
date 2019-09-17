@@ -38,8 +38,8 @@ pub enum ControlMsg {
 /// to the engine.
 /// 
 /// Note that these _engine-level_ operations
-/// are completely unrelated to _graph-level_
-/// operations (such as `DspNode::Source.state`).
+/// are completely unrelated to _graph/source-level_
+/// operations (such as `Pausable`).
 #[derive(Clone)]
 pub struct EngineControls {
 	tx: mpsc::SyncSender<ControlMsg>
