@@ -65,14 +65,14 @@ impl AudioEngine for SpeakerEngine {
 						// Our speaker format matches the internal format, thus we do
 						// not need to allocate an extra vector
 						let buf_slice: &mut [StandardFrame] = buffer.to_frame_slice_mut().unwrap();
-						shared_graph.lock().unwrap().audio_requested(buf_slice, sample_hz);
+						shared_graph.lock().audio_requested(buf_slice, sample_hz);
 					} else {
 						// Read audio from graph into temporary buffer
 						let sample_count = buffer_sample_count(&data).unwrap_or(0);
 						let frame_count = sample_count / STANDARD_CHANNELS;
 						// TODO: Allocate Vec once, then grow as needed
 						let mut audio: Vec<StandardFrame> = vec![StandardFrame::equilibrium(); frame_count];
-						shared_graph.lock().unwrap().audio_requested(&mut audio, sample_hz);
+						shared_graph.lock().audio_requested(&mut audio, sample_hz);
 					
 						with_buffer_of!(data, |buffer| write_audio(&audio, buffer));
 					}

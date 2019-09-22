@@ -24,22 +24,22 @@ impl AudioGraphService {
 
 impl AudioGraphServiceRpc for AudioGraphService {
 	fn get(&self) -> RpcResult<RpcGraph> {
-		let graph = self.shared_graph.lock().unwrap();
+		let graph = self.shared_graph.lock();
 		Ok(RpcGraph::from_audio_graph(&graph))
 	}
 	
 	fn add_node(&self, node: RpcNode) -> RpcResult<RpcNodeIndex> {
-		node.into_dsp_node(self.engine.sample_hz).map(|node| self.shared_graph.lock().unwrap().add_node(node).index())
+		node.into_dsp_node(self.engine.sample_hz).map(|node| self.shared_graph.lock().add_node(node).index())
 	}
 	
 	fn remove_node(&self, index: RpcNodeIndex) -> RpcResult<()> {
-		self.shared_graph.lock().unwrap().remove_node(index.into());
+		self.shared_graph.lock().remove_node(index.into());
 		Ok(())
 	}
 	
 	fn replace_node(&self, index: RpcNodeIndex, node: RpcNode) -> RpcResult<()> {
 		node.into_dsp_node(self.engine.sample_hz).and_then(|node| {
-			let mut graph = self.shared_graph.lock().unwrap();
+			let mut graph = self.shared_graph.lock();
 			let node_ref = graph.node_mut(index.into()).ok_or_else(|| server_error(format!("Node at {} does not exist", index)))?;
 			*node_ref = node;
 			Ok(())
@@ -47,7 +47,7 @@ impl AudioGraphServiceRpc for AudioGraphService {
 	}
 	
 	fn add_edge(&self, edge: RpcEdge) -> RpcResult<RpcEdgeIndex> {
-		match self.shared_graph.lock().unwrap().add_connection(edge.src.into(), edge.dest.into()) {
+		match self.shared_graph.lock().add_connection(edge.src.into(), edge.dest.into()) {
 			Ok(edge_index) => Ok(edge_index.index()),
 			Err(..) => Err(RpcError {
 				code: RpcErrorCode::InvalidParams,
