@@ -40,7 +40,7 @@ impl AudioGraphServiceRpc for AudioGraphService {
 	fn replace_node(&self, index: RpcNodeIndex, node: RpcNode) -> RpcResult<()> {
 		node.into_dsp_node(self.engine.sample_hz).and_then(|node| {
 			let mut graph = self.shared_graph.lock().unwrap();
-			let node_ref = graph.node_mut(index.into()).map_or_else(|| Err(server_error(format!("Node at {} does not exist", index))), Ok)?;
+			let node_ref = graph.node_mut(index.into()).ok_or_else(|| server_error(format!("Node at {} does not exist", index)))?;
 			*node_ref = node;
 			Ok(())
 		})
@@ -67,15 +67,22 @@ impl FromDspNodeExt for RpcNode {
 		match *node {
 			DspNode::Empty => RpcNode::Empty,
 			DspNode::Silence => RpcNode::Silence,
-			DspNode::File(Pausable { wrapped: ref converting_source, paused }) => RpcNode::File {
-				file_path: converting_source.wrapped().file_path().to_owned(),
-				paused: paused
+			DspNode::File(Pausable { wrapped: ref converting, paused }) => {
+				let source = converting.wrapped();
+				RpcNode::File {
+					file_path: source.file_path().to_owned(),
+					paused: paused
+				}
 			},
-			DspNode::Command(Pausable { wrapped: ref converting_source, paused }) => RpcNode::Command {
-				command: converting_source.wrapped().command().to_owned(),
-				args: converting_source.wrapped().args().iter().map(|s| s.to_owned()).collect(),
-				sample_hz: converting_source.wrapped().sample_hz(),
-				paused: paused
+			DspNode::Command(Pausable { wrapped: ref converting, paused }) => {
+				let source = converting.wrapped();
+				RpcNode::Command {
+					command: source.command().to_owned(),
+					args: source.args().iter().map(|s| s.to_owned()).collect(),
+					sample_hz: source.sample_hz(),
+					takes_input: source.input().is_some(),
+					paused: paused
+				}
 			},
 			DspNode::DynSource(..) => RpcNode::DynSource,
 			DspNode::Volume(volume) => RpcNode::Volume { level: volume },
@@ -106,11 +113,11 @@ impl IntoDspNodeExt for RpcNode {
 					paused
 				)
 			)),
-			RpcNode::Command { ref command, ref args, sample_hz, paused } => Ok(DspNode::Command(
+			RpcNode::Command { ref command, ref args, sample_hz, takes_input, paused } => Ok(DspNode::Command(
 				Pausable::new(
 					Converting::to_sample_hz(
 						target_sample_hz,
-						CommandSource::new(command, &args.iter().map(|s| s.as_ref()).collect::<Vec<_>>(), sample_hz).map_err(|e| server_error(e))?
+						CommandSource::new(command, &args.iter().map(|s| s.as_ref()).collect::<Vec<_>>(), sample_hz, takes_input).map_err(|e| server_error(e))?
 					),
 					paused
 				)

@@ -28,6 +28,7 @@ pub enum RpcNode {
 		command: String,
 		#[serde(default)] args: Vec<String>,
 		sample_hz: f64,
+		takes_input: bool,
 		paused: bool
 	},
 	/// A dynamically dispatched source

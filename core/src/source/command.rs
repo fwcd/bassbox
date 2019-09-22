@@ -1,4 +1,5 @@
-use std::process::{ChildStdout, Command, Stdio};
+use std::process::{ChildStdout, ChildStdin, Command, Stdio};
+use std::io::Write;
 use byteorder::{BigEndian, ReadBytesExt};
 use dsp::{Signal, Frame};
 use crate::audioformat::StandardFrame;
@@ -8,25 +9,32 @@ use super::AudioSource;
 /// point PCM samples in big-endian from a
 /// subprocess' stdout.
 pub struct CommandSource {
-	process: ChildStdout,
+	child_out: ChildStdout,
+	child_in: Option<ChildStdin>,
 	command: String,
 	args: Vec<String>,
 	source_sample_hz: f64,
-	reached_end: bool
+	reached_end: bool,
 }
 
 // TODO: Make 'command' an intermediate/processing node
 
 impl CommandSource {
-	pub fn new(command: &str, args: &[&str], source_sample_hz: f64) -> Result<CommandSource, String> {
+	/// Creates a new CommandSource spawning the provided executable
+	/// with the given args.
+	/// 
+	/// The `takes_input` flag optionally enables piped standard input, thus
+	/// making it possible to feed audio to the child process.
+	pub fn new(command: &str, args: &[&str], source_sample_hz: f64, takes_input: bool) -> Result<CommandSource, String> {
+		let process = Command::new(command)
+			.args(args)
+			.stdin(if takes_input { Stdio::piped() } else { Stdio::null() })
+			.stderr(Stdio::null())
+			.stdout(Stdio::piped())      
+			.spawn().map_err(|e| format!("{:?}", e))?;
 		Ok(CommandSource {
-			process: Command::new(command)
-				.args(args)
-				.stdin(Stdio::null())
-				.stderr(Stdio::null())
-				.stdout(Stdio::piped())      
-				.spawn().map_err(|e| format!("{:?}", e))?
-				.stdout.map_or_else(|| Err("Could not fetch command's stdout".to_owned()), Ok)?,
+			child_out: process.stdout.ok_or("Could not fetch child's stdout")?,
+			child_in: if takes_input { Some(process.stdin.ok_or("Could not fetch child's stdin")?) } else { None },
 			command: command.to_owned(),
 			args: args.iter().map(|s| (*s).to_owned()).collect(),
 			source_sample_hz: source_sample_hz,
@@ -35,7 +43,7 @@ impl CommandSource {
 	}
 	
 	fn read_sample(&mut self) -> Option<f32> {
-		self.process.read_f32::<BigEndian>().ok()
+		self.child_out.read_f32::<BigEndian>().ok()
 	}
 	
 	fn read_frame(&mut self) -> Option<StandardFrame> {
@@ -44,8 +52,14 @@ impl CommandSource {
 		Some([left, right])
 	}
 	
+	/// Fetches the child processes stdin. Only present
+	/// if `takes_input` was set.
+	pub fn input(&self) -> Option<&impl Write> { self.child_in.as_ref() }
+	
+	/// Fetches the executable that was invoked.
 	pub fn command(&self) -> &str { self.command.as_ref() }
 	
+	/// Fetches the arguments from the command.
 	pub fn args(&self) -> &[String] { &self.args }
 }
 
