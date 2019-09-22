@@ -90,6 +90,7 @@ dependencies = [
  "cpal 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "dsp-chain 0.13.1 (git+https://github.com/fwcd/dsp-chain?rev=55ecc85)",
  "minimp3 0.3.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "parking_lot 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
