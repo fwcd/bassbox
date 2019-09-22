@@ -38,7 +38,7 @@ impl AudioEngine for SpeakerEngine {
 			panic!("CPAL output format has {} channels, but only exactly {} are supported currently.", channels, STANDARD_CHANNELS);
 		}
 		
-		let (control_sender, control_receiver) = mpsc::sync_channel(1);
+		let (control_sender, control_receiver) = mpsc::sync_channel(5);
 		event_loop.play_stream(stream_id.clone()).expect("Could not play stream.");
 
 		thread::spawn(move || {
