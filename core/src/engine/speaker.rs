@@ -3,6 +3,7 @@ use crate::audioformat::{StandardFrame, STANDARD_CHANNELS, StandardSample};
 use crate::graph::SharedAudioGraph;
 use std::sync::mpsc;
 use std::thread;
+use log::{info, error};
 use dsp::{Sample, Frame, FromSample, Node, sample::conv::ToFrameSliceMut};
 use cpal::{StreamData, UnknownTypeOutputBuffer, OutputBuffer};
 use cpal::traits::{DeviceTrait, EventLoopTrait, HostTrait};
@@ -13,7 +14,7 @@ macro_rules! with_buffer_of {
 			StreamData::Output { buffer: UnknownTypeOutputBuffer::U16(ref mut buffer) } => $body(buffer),
 			StreamData::Output { buffer: UnknownTypeOutputBuffer::I16(ref mut buffer) } => $body(buffer),
 			StreamData::Output { buffer: UnknownTypeOutputBuffer::F32(ref mut buffer) } => $body(buffer),
-			_ => println!("Audio format was not recognized by CPAL!")
+			_ => error!("Audio format was not recognized by CPAL!")
 		}
 	};
 }
@@ -35,7 +36,7 @@ impl AudioEngine for SpeakerEngine {
 		
 		if channels != STANDARD_CHANNELS {
 			// TODO
-			panic!("CPAL output format has {} channels, but only exactly {} are supported currently.", channels, STANDARD_CHANNELS);
+			error!("CPAL output format has {} channels, but only exactly {} are supported currently.", channels, STANDARD_CHANNELS);
 		}
 		
 		let (control_sender, control_receiver) = mpsc::sync_channel(5);
@@ -55,7 +56,7 @@ impl AudioEngine for SpeakerEngine {
 							with_buffer_of!(data, write_silence);
 							paused = true
 						}
-						_ => println!("Control message not recognized by the speaker/CPAL engine: {:?}", msg)
+						_ => info!("Control message not recognized by the speaker/CPAL engine: {:?}", msg)
 					}
 				}
 			
